@@ -1,38 +1,9 @@
-
-
-####################
-### DEPENDENCIES ###
-####################
-
-sudo apt-get install -y python-pip
-sudo pip install stem 
-sudo apt-get install -y libevent-dev openssl libssl-dev
+#!/bin/bash
 
 # Get our public ip address
 MY_PUBLIC_IP=$(wget http://ipinfo.io/ip -qO -)
 
-# Setup dirs
-mkdir cache results
-
-###########
-### TOR ###
-###########
-
 cd tor
-
-mkdir data logs pids configs
-
-# Unpack and build version of Tor used by client
-tar -zxvf tor-0.2.3.25-patched.tgz
-cd tor-0.2.3.25-patched/
-./configure && make
-cd .. 
-
-# Unpack and build version of Tor used by W and Z
-tar -zxvf tor-0.2.4.22.tar.gz
-cd tor-0.2.4.22/
-./configure && make 
-cd ..
 
 # Generate torrc files
 cat <<EOF > ./configs/torrc-client
@@ -101,19 +72,17 @@ EOF
 # make data dirs for w, z and client
 mkdir data/w data/z data/client
 
-# Start Tor 
-tor-0.2.3.25-patched/src/or/tor -f configs/torrc-client
-tor-0.2.4.22/src/or/tor -f configs/torrc-w
-tor-0.2.4.22/src/or/tor -f configs/torrc-z
+# Start Tor
+tor-0.4.4.6/src/app/tor -f configs/torrc-client
+tor-0.4.4.6/src/app/tor -f configs/torrc-w
+tor-0.4.4.6/src/app/tor -f configs/torrc-z
 
 cd ..
-
-
 
 # Give them some time to start up
 sleep 5
 
-# Determine the fingerprint of W and Z 
+# Determine the fingerprint of W and Z
 FP_W=$(cat ./tor/data/w/fingerprint | cut -f2 -d" ")
 FP_Z=$(cat ./tor/data/z/fingerprint | cut -f2 -d" ")
 FP_C=$(cat ./tor/data/client/fingerprint | cut -f2 -d" ")
@@ -140,3 +109,5 @@ C $MY_PUBLIC_IP,$FP_C
 SocksTimeout 60
 MaxCircuitBuildAttempts 5
 EOF
+
+nohup ./echo_server &

@@ -1,0 +1,41 @@
+#!/bin/bash
+
+DOCKER=$(which docker)
+IMAGENAME=ting
+IMAGEID=latest
+
+usage() {
+  echo "Usage: $0 [build|run]"
+}
+
+build () {
+  ${DOCKER} build -t ${IMAGENAME}:${IMAGEID} .
+}
+
+run() {
+  exec ${DOCKER} run -it -p 16667:16667 -p 9050:9050 -p 9051:9051 -p 9250:9250 -p 9002:9002 -p 9251:9251 -p 9150:9150 -p 9001:9001 -p 9151:9151 -p 9030:9030 ${IMAGENAME}:${IMAGEID} /bin/bash
+}
+
+# parse the arguments
+while [ "$1" != "" ]; do
+  PARAM=`echo $1 | awk -F= '{print $1}'`
+  VALUE=`echo $1 | awk -F= '{print $2}'`
+  case $PARAM in
+    -h | --help)
+      usage
+      exit
+      ;;
+    build)
+      build
+      ;;
+    run)
+      run
+      ;;
+    *)
+      echo "ERROR: unknown parameter \"$PARAM\""
+      usage
+      exit 1
+      ;;
+  esac
+  shift
+done
