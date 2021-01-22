@@ -3,6 +3,7 @@
 DOCKER=$(which docker)
 IMAGENAME=ting
 IMAGEID=latest
+CONTAINTERNAME=ting
 
 usage() {
   echo "Usage: $0 [build|run]"
@@ -13,7 +14,20 @@ build () {
 }
 
 run() {
-  exec ${DOCKER} run -it -p 16667:16667 -p 9050:9050 -p 9051:9051 -p 9250:9250 -p 9002:9002 -p 9251:9251 -p 9150:9150 -p 9001:9001 -p 9151:9151 -p 9030:9030 ${IMAGENAME}:${IMAGEID} /bin/bash
+  exec ${DOCKER} run -it\
+       --name ${CONTAINTERNAME} \
+       -v ${PWD}/ting:/root/ting \
+       -p 16667:16667 \
+       -p 9050:9050 \
+       -p 9051:9051 \
+       -p 9250:9250 \
+       -p 9002:9002 \
+       -p 9251:9251 \
+       -p 9150:9150 \
+       -p 9001:9001 \
+       -p 9151:9151 \
+       -p 9030:9030 \
+       ${IMAGENAME}:${IMAGEID} /bin/bash
 }
 
 # parse the arguments
