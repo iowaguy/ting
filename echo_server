@@ -1,11 +1,11 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import socket 
 import sys
 import datetime
 from struct import pack, unpack
 
-response = pack('!c','!')
+response = bytes('!c!', "utf-8")
 
 host = '' 
 port = None
@@ -46,8 +46,8 @@ while 1:
             data = client.recv(size) 
         client.close()
         if debug:
-        print("Connection closed.")
-        sys.stdout.flush()
-    except socket.error, e:
+            print("Connection closed.")
+            sys.stdout.flush()
+    except socket.error as e:
         if debug:
             print("Socket Error: " + str(e))
