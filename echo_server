@@ -3,21 +3,17 @@
 import socket 
 import sys
 import datetime
-from struct import pack, unpack
 
 response = bytes('!c!', "utf-8")
 
-host = '' 
+host = '0.0.0.0' 
 port = None
-try:
-    with open('./tingrc') as f:
-        r = f.readlines()
-        for l in r:
-            if "DestinationPort" in l:
-                port = int(l.strip().split(" ")[1])
-                break
-except:
-    pass
+with open('./tingrc') as f:
+    r = f.readlines()
+    for l in r:
+        if "DestinationPort" in l:
+            port = int(l.strip().split(" ")[1])
+            break
 
 if len(sys.argv) > 1:
     port = int(sys.argv[1])
@@ -41,7 +37,7 @@ while 1:
             print("Connection accepted from " + str(address))
             sys.stdout.flush()
         data = client.recv(size)
-        while (data and (unpack('!c',data) != 'X')): 
+        while data and (str(bytes('!c', 'utf-8') + data)) != 'X':
             client.send(data) 
             data = client.recv(size) 
         client.close()

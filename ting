@@ -24,7 +24,6 @@ import json
 import random
 import signal
 import urllib
-from struct import pack, unpack
 from select import select
 import glob
 
@@ -139,11 +138,14 @@ class TingClient():
 
     # Tell socks to use tor as a proxy
     def setup_proxy(self):
-        socks.set_default_proxy(SOCKS_TYPE, SOCKS_HOST, self.socks_port)
-        socket.socket = socks.socksocket
-        sock = socks.socksocket()
-        sock.settimeout(self.socks_timeout)
-        return sock
+        s = socks.socksocket()
+        s.set_proxy(SOCKS_TYPE, SOCKS_HOST, self.socks_port)
+        s.settimeout(self.socks_timeout)
+        # socks.set_default_proxy(SOCKS_TYPE, SOCKS_HOST, self.socks_port)
+        # socket.socket = socks.socksocket
+        # sock = socks.socksocket()
+        # sock.settimeout(self.socks_timeout)
+        return s
 
     def parse_relay_list(self, relay_source, relay_cache_time):
         data = None

@@ -26,7 +26,7 @@ build_tor() {
   mkdir data logs pids configs
 
   pushd tor-${TOR_VERSION}/
-  ./configure && make
+  ./configure && make -j8
   popd
 }
 
