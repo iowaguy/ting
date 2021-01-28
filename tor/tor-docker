@@ -1,0 +1,56 @@
+#!/bin/bash
+
+DOCKER=$(which docker)
+IMAGENAME=tor
+IMAGEID=latest
+TOR_VERSION=0.4.4.6
+
+usage() {
+  echo "Usage: $0 [build|run|clean]"
+}
+
+build () {
+  ${DOCKER} build -t ${IMAGENAME}:${IMAGEID} .
+}
+
+run() {
+  exec ${DOCKER} run -it\
+       -p 9050:9050 \
+       -p 9051:9051 \
+       -p 9001:9001 \
+       -p 9030:9030 \
+       ${IMAGENAME}:${IMAGEID} dirauth
+}
+
+clean() {
+  docker ps | grep -v CONTAINER | awk '{print $1}' | xargs docker stop
+  docker ps -a | grep -v CONTAINER | awk '{print $1}' | xargs docker rm
+  rm -rf tor-${TOR_VERSION}*
+}
+
+# parse the arguments
+while [ "$1" != "" ]; do
+  PARAM=`echo $1 | awk -F= '{print $1}'`
+  VALUE=`echo $1 | awk -F= '{print $2}'`
+  case $PARAM in
+    -h | --help)
+      usage
+      exit
+      ;;
+    build)
+      build
+      ;;
+    run)
+      run
+      ;;
+    clean)
+      clean
+      ;;
+    *)
+      echo "ERROR: unknown parameter \"$PARAM\""
+      usage
+      exit 1
+      ;;
+  esac
+  shift
+done

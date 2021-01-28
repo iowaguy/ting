@@ -1,29 +1,35 @@
 #!/bin/bash
 
-apt-get update
-apt-get install --yes wget sudo gcc libevent-dev libssl-dev zlib1g-dev make openssl python
-wget https://bootstrap.pypa.io/get-pip.py
-python get-pip.py
-pip install stem
+TOR_VERSION=0.4.4.6
 
-if [[ "x${DOCKER_BUILD}" != "x1" ]]; then
+install_deps() {
+  sudo apt-get update
+  sudo apt-get install --yes \
+       wget sudo gcc libevent-dev libssl-dev wget \
+       zlib1g-dev make openssl python3 python3-pip
+  pip3 install stem PySocks
+}
+
+setup() {
+  mkdir tor/
   cd tor/
-  tar -zxvf tor-0.4.4.6.tar.gz
+  wget https://dist.torproject.org/tor-0.4.4.6.tar.gz
+  tar -xzvf tor-0.4.4.6.tar.gz
   cd ..
-fi
 
-# Setup dirs
-mkdir cache results
+  # Setup dirs
+  mkdir cache results
+}
 
-###########
-### TOR ###
-###########
+build_tor() {
+  cd tor
+  mkdir data logs pids configs
 
-cd tor
+  pushd tor-${TOR_VERSION}/
+  ./configure && make -j8
+  popd
+}
 
-mkdir data logs pids configs
-
-tar -zxvf tor-0.4.4.6.tar.gz
-cd tor-0.4.4.6/
-./configure && make
-cd ..
+install_deps
+setup
+build_tor

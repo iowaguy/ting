@@ -242,7 +242,8 @@ class TingClient():
         while failures < self.max_circuit_builds:
             try:
                 log("Building circuit...")
-                cid = self.controller.new_circuit(circ, await_build = True)
+                import pdb; pdb.set_trace()
+                cid = self.controller.new_circuit(circ, await_build = True, purpose = "controller")
                 success("Circuit built successfully.")
                 return cid
 
