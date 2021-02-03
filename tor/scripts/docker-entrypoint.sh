@@ -1,58 +1,98 @@
 #!/bin/bash
 
+orport=9001
+tmp_dir=$XDG_RUNTIME_DIR
+data_directory=/etc/data
+tor_version=tor
+
 relay() {
-  mkdir configs/
+  A="relay"
+  dirauth_nickname=$(cat $data_directory/dirauth/fingerprint | awk '{print $1}')
+  dirauth_fingerprint=$(cat $data_directory/dirauth/fingerprint | awk '{print $2}')
+  dirauth_ip=$(cat $data_directory/dirauth/ip)
+  mkdir -pv configs/ logs/ $data_directory/$A $A
+  chmod 700 $A
   cat <<EOF > ./configs/torrc
-AvoidDiskWrites 1
-ControlPort 9151
+Log notice stdout
+ShutdownWaitLength 2
+# ExitRelay 1
+IPv6Exit 1
+ExitPolicy reject *:*
 CookieAuthentication 1
-LearnCircuitBuildTimeout 0
-DataDirectory $PWD/data/w
-ORPort 9001
-DirReqStatistics 0
-UseMicroDescriptors 0
-DownloadExtraInfo 1
-Log notice file $PWD/logs/w.log
-SocksPort 9150
-ExitPolicyRejectPrivate 0
-Exitpolicy reject *:*
-RunAsDaemon 1
-PublishServerDescriptor 1
+ContactInfo tortest (AT) weintraub (DOT) xyz
+LogTimeGranularity 1
+SafeLogging 0
+DataDirectory $data_directory/$A
+PidFile $A/tor.pid
+Address $A
+SocksPort 0
+ControlPort 0
+ControlSocket $(pwd)/$A/control_socket
+ORPort $orport
+#DirPort auto
+Nickname $A
+DirAuthority $dirauth_nickname $dirauth_ip:9030 $dirauth_fingerprint
+TestingTorNetwork 1
+
+# AvoidDiskWrites 1
+# ControlPort 9051
+# CookieAuthentication 1
+# LearnCircuitBuildTimeout 0
+# DataDirectory $PWD/data/w
+# ORPort $orport
+# DirReqStatistics 0
+# UseMicroDescriptors 0
+# DownloadExtraInfo 1
+# Log notice file $PWD/logs/w.log
+# SocksPort 9150
+# ExitPolicyRejectPrivate 0
+# Exitpolicy reject *:*
+# RunAsDaemon 1
+# PublishServerDescriptor 1
 EOF
 }
 
 dirauth() {
   A="dirauth"
   ip=127.0.0.1
-  orport=9001
   dirport=9030
-  mkdir -pv configs/ logs/ $A
+  mkdir -pv configs/ logs/ $data_directory/$A $A
+  hostname -i > $data_directory/$A/ip
   chmod 700 $A
   cat <<EOF > ./configs/torrc
+AuthoritativeDirectory 1
+V3AuthoritativeDirectory 1
+AssumeReachable 1
 Log notice stdout
+# Log notice file $data_directory/$A.log
 ShutdownWaitLength 2
 ExitPolicy reject *:*
-CookieAuthentication 1
-ContactInfo tortest (at) weintraub (dot) xyz
+# CookieAuthentication 1
+ContactInfo tortest (AT) weintraub (DOT) xyz
 LogTimeGranularity 1
 SafeLogging 0
-DataDirectory $A
-PidFile $A/tor.pid
-Address $ip
+DataDirectory $data_directory/$A
+PidFile /root/$A/tor.pid
+Address $(hostname -i)
 SocksPort 0
 ControlPort 0
 ControlSocket $(pwd)/$A/control_socket
-ORPort $ip:$orport
-DirPort $ip:$dirport
-Nickname test
-# AuthoritativeDirectory 1
-# V3AuthoritativeDirectory 1
+ORPort 0.0.0.0:$orport
+DirPort 0.0.0.0:$dirport
+Nickname TestDirAuth
 DirAllowPrivateAddresses 1
+# RunAsDaemon 0
+# DirPortFrontPage tor-${TOR_VERSION}/contrib/operator-tools/tor-exit-notice.html
+# Sandbox 1
 EOF
+
+  echo "very secret password\n" > passwd
+  sudo ${tor_version}/src/tools/tor-gencert -v --create-identity-key -i $data_directory/$A/keys/authority_identity_key -s $data_directory/$A/keys/authority_signing_key -c $data_directory/$A/keys/authority_certificate --passphrase-fd 0 < passwd
+  wait
 }
 
 start_tor() {
-  exec tor-${TOR_VERSION}/src/app/tor -f configs/torrc
+  exec ${tor_version}/src/app/tor -f /root/configs/torrc
 }
 
 while [ "$1" != "" ]; do

@@ -1,0 +1,23 @@
+version: "3.9"  # optional since v1.27.0
+services:
+  dir_auth:
+    build: .
+    image: tor:latest
+    ports:
+      - "9030:9030"
+      - "9001:9001"
+    command: dirauth
+    volumes:
+      - tor-shared:/etc/data
+  relay1:
+    image: tor:latest
+    ports:
+      - "9002:9001"
+      - "9050:9050"
+    command: relay
+    volumes:
+      - tor-shared:/etc/data
+    depends_on:
+      - dir_auth
+volumes:
+  tor-shared:
