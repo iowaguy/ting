@@ -82,7 +82,7 @@ DirPort 0.0.0.0:$dirport
 Nickname TestDirAuth
 DirAllowPrivateAddresses 1
 # RunAsDaemon 0
-# DirPortFrontPage tor-${TOR_VERSION}/contrib/operator-tools/tor-exit-notice.html
+# DirPortFrontPage ${TOR_VERSION}/contrib/operator-tools/tor-exit-notice.html
 # Sandbox 1
 EOF
 

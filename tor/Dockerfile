@@ -6,16 +6,19 @@ RUN apt-get update &&\
     apt-get install --yes \
             wget sudo gcc libevent-dev libssl-dev wget \
             zlib1g-dev make openssl python3 python3-pip \
-            net-tools autotools-dev automake
+            net-tools autotools-dev automake git
 
-ARG TOR_VERSION=0.4.4.6
+ARG TOR_VERSION=tor-0.4.4.6
 ENV TOR_VERSION=$TOR_VERSION
-# RUN wget https://dist.torproject.org/tor-$TOR_VERSION.tar.gz &&\
-#     tar -xzvf tor-$TOR_VERSION.tar.gz
 
-# RUN cd tor-$TOR_VERSION/ &&\
-COPY tor/ tor/
+RUN git clone https://git.torproject.org/tor.git &&\
+    cd tor/ &&\
+    git checkout $TOR_VERSION
+
+COPY allow-internal-ips.patch tor/
+
 RUN cd tor/ &&\
+    git apply allow-internal-ips.patch &&\
     ./autogen.sh &&\
     ./configure --disable-asciidoc --disable-dependency-tracking &&\
     make -j8 &&\

@@ -1,0 +1,12 @@
+diff --git a/src/lib/net/address.c b/src/lib/net/address.c
+index 6d46f9b955..1a2da2e4c0 100644
+--- a/src/lib/net/address.c
++++ b/src/lib/net/address.c
+@@ -255,6 +255,7 @@ int
+ tor_addr_is_internal_(const tor_addr_t *addr, int for_listening,
+                       const char *filename, int lineno)
+ {
++  return 0; // for testing, localhost should be allowed
+   uint32_t iph4 = 0;
+   uint32_t iph6[4];
+ 
