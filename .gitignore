@@ -13,3 +13,4 @@
 *.pyc
 
 data/
+/tor/tor/

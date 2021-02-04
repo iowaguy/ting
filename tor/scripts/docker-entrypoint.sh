@@ -1,16 +1,17 @@
 #!/bin/bash
 
-orport=9001
-tmp_dir=$XDG_RUNTIME_DIR
-data_directory=/etc/data
-tor_version=tor
+DATA_DIRECTORY=/etc/data
+TOR_PATH=$TOR_VERSION
+TOR=${TOR_PATH}/src/app/tor
+ORPORT=9001
 
 relay() {
   A="relay"
-  dirauth_nickname=$(cat $data_directory/dirauth/fingerprint | awk '{print $1}')
-  dirauth_fingerprint=$(cat $data_directory/dirauth/fingerprint | awk '{print $2}')
-  dirauth_ip=$(cat $data_directory/dirauth/ip)
-  mkdir -pv configs/ logs/ $data_directory/$A $A
+  DIRAUTH_NICKNAME=$(cat $DATA_DIRECTORY/dirauth/fingerprint | awk '{print $1}')
+  DIRAUTH_FINGERPRINT=$(cat $DATA_DIRECTORY/dirauth/fingerprint | awk '{print $2}')
+  DIRAUTH_IP=$(cat $DATA_DIRECTORY/dirauth/ip)
+  ORPORT=9001
+  mkdir -pv configs/ logs/ $DATA_DIRECTORY/$A $A
   chmod 700 $A
   cat <<EOF > ./configs/torrc
 Log notice stdout
@@ -22,77 +23,117 @@ CookieAuthentication 1
 ContactInfo tortest (AT) weintraub (DOT) xyz
 LogTimeGranularity 1
 SafeLogging 0
-DataDirectory $data_directory/$A
+DataDirectory $DATA_DIRECTORY/$A
 PidFile $A/tor.pid
 Address $A
 SocksPort 0
 ControlPort 0
 ControlSocket $(pwd)/$A/control_socket
-ORPort $orport
+ORPort $ORPORT
 #DirPort auto
 Nickname $A
-DirAuthority $dirauth_nickname $dirauth_ip:9030 $dirauth_fingerprint
+DirAuthority $DIRAUTH_NICKNAME $DIRAUTH_IP:9030 $DIRAUTH_FINGERPRINT
 TestingTorNetwork 1
+Sandbox 1
 
-# AvoidDiskWrites 1
-# ControlPort 9051
-# CookieAuthentication 1
-# LearnCircuitBuildTimeout 0
-# DataDirectory $PWD/data/w
-# ORPort $orport
-# DirReqStatistics 0
-# UseMicroDescriptors 0
-# DownloadExtraInfo 1
-# Log notice file $PWD/logs/w.log
-# SocksPort 9150
-# ExitPolicyRejectPrivate 0
-# Exitpolicy reject *:*
-# RunAsDaemon 1
-# PublishServerDescriptor 1
 EOF
 }
 
 dirauth() {
-  A="dirauth"
-  ip=127.0.0.1
-  dirport=9030
-  mkdir -pv configs/ logs/ $data_directory/$A $A
-  hostname -i > $data_directory/$A/ip
-  chmod 700 $A
+  ROLE="DIRAUTH"
+  # Generate a random name
+  TOR_NICKNAME=${ROLE}$(pwgen -0A 10)
+  DIRPORT=9030
+  CONTROL_PORT=9051
+
+  mkdir -pv configs/ logs/ $DATA_DIRECTORY/$TOR_NICKNAME/keys $TOR_NICKNAME
+
+  echo "password" > passwd
+  sudo ${TOR_PATH}/src/tools/tor-gencert -v \
+       -m 12 -a $(hostname -i):${DIRPORT} \
+       --create-identity-key \
+       -i $DATA_DIRECTORY/$TOR_NICKNAME/keys/authority_identity_key \
+       -s $DATA_DIRECTORY/$TOR_NICKNAME/keys/authority_signing_key \
+       -c $DATA_DIRECTORY/$TOR_NICKNAME/keys/authority_certificate \
+       --passphrase-fd 0 < passwd
+  wait
+
+  ${TOR} --list-fingerprint --orport 1 \
+    	   --dirserver "x 127.0.0.1:1 ffffffffffffffffffffffffffffffffffffffff" \
+	       --datadirectory ${DATA_DIRECTORY}/${TOR_NICKNAME}
+
+  # IP=127.0.0.1
+  # hostname -i > $DATA_DIRECTORY/$TOR_NICKNAME/ip
+  # chmod 700 $TOR_NICKNAME
+  DIRAUTH_FINGERPRINT=$(grep "fingerprint" $DATA_DIRECTORY/$TOR_NICKNAME/keys/authority_certificate | awk -F " " '{print $2}')
+  DIRAUTH_FINGERPRINT_RELAY=$(cat $DATA_DIRECTORY/$TOR_NICKNAME/fingerprint | awk -F " " '{print $2}')
+  DIRAUTH_IP=$(grep "dir-address" $DATA_DIRECTORY/$TOR_NICKNAME/keys/* | awk -F " " '{print $2}')
+
+  # generate by running tor --hash-password password
+  TOR_CONTROL_PASSWD="16:C9C094CC959A441360CF9FDC98510A6D0489B96E06627783596DF54C32"
+
+
   cat <<EOF > ./configs/torrc
+TestingTorNetwork 1
+
+## Rapid Bootstrap Testing Options ##
+# These typically launch a working minimal Tor network in 6s-10s
+# These parameters make tor networks bootstrap fast,
+# but can cause consensus instability and network unreliability
+# (Some are also bad for security.)
+AssumeReachable 1
+PathsNeededToBuildCircuits 0.25
+TestingDirAuthVoteExit *
+TestingDirAuthVoteHSDir *
+V3AuthNIntervalsValid 2
+
+## Always On Testing Options ##
+# We enable TestingDirAuthVoteGuard to avoid Guard stability requirements
+TestingDirAuthVoteGuard *
+# We set TestingMinExitFlagThreshold to 0 to avoid Exit bandwidth requirements
+TestingMinExitFlagThreshold 0
+
+## Options that we always want to test ##
+Sandbox 1
+
+# Private tor network configuration
+RunAsDaemon 0
+ConnLimit 60
+ShutdownWaitLength 0
+Log notice stdout
+ProtocolWarnings 1
+SafeLogging 0
+DisableDebuggerAttachment 0
+
+DirPortFrontPage ${TOR_PATH}/contrib/operator-tools/tor-exit-notice.html
+
+Nickname $TOR_NICKNAME
+DataDirectory $DATA_DIRECTORY/$TOR_NICKNAME
+Address $(hostname -i)
+ControlPort 0.0.0.0:$CONTROL_PORT
+HashedControlPassword $TOR_CONTROL_PASSWD
 AuthoritativeDirectory 1
 V3AuthoritativeDirectory 1
-AssumeReachable 1
-Log notice stdout
-# Log notice file $data_directory/$A.log
-ShutdownWaitLength 2
-ExitPolicy reject *:*
-# CookieAuthentication 1
-ContactInfo tortest (AT) weintraub (DOT) xyz
-LogTimeGranularity 1
-SafeLogging 0
-DataDirectory $data_directory/$A
-PidFile /root/$A/tor.pid
-Address $(hostname -i)
-SocksPort 0
-ControlPort 0
-ControlSocket $(pwd)/$A/control_socket
-ORPort 0.0.0.0:$orport
-DirPort 0.0.0.0:$dirport
-Nickname TestDirAuth
-DirAllowPrivateAddresses 1
-# RunAsDaemon 0
-# DirPortFrontPage ${TOR_VERSION}/contrib/operator-tools/tor-exit-notice.html
-# Sandbox 1
-EOF
 
-  echo "very secret password\n" > passwd
-  sudo ${tor_version}/src/tools/tor-gencert -v --create-identity-key -i $data_directory/$A/keys/authority_identity_key -s $data_directory/$A/keys/authority_signing_key -c $data_directory/$A/keys/authority_certificate --passphrase-fd 0 < passwd
-  wait
+TestingV3AuthInitialVotingInterval 300
+TestingV3AuthInitialVoteDelay 5
+V3AuthVoteDelay 5
+TestingV3AuthInitialDistDelay 5
+V3AuthDistDelay 5
+
+OrPort $ORPORT
+Dirport $DIRPORT
+ExitPolicy accept *:*
+DirAuthority $TOR_NICKNAME orport=$ORPORT no-v2 v3ident=$DIRAUTH_FINGERPRINT $DIRAUTH_IP $DIRAUTH_FINGERPRINT_RELAY
+
+EOF
 }
 
 start_tor() {
-  exec ${tor_version}/src/app/tor -f /root/configs/torrc
+  cat /root/configs/torrc
+  exec ${TOR} -f /root/configs/torrc
+  # ${TOR} -f /root/configs/torrc &
+  # exec /bin/bash
 }
 
 while [ "$1" != "" ]; do

@@ -3,17 +3,17 @@ services:
   dir_auth:
     build: .
     image: tor:latest
-    ports:
-      - "9030:9030"
-      - "9001:9001"
+    # ports:
+    #   - "9030:9030"
+    #   - "9002:9002"
     command: dirauth
     volumes:
       - tor-shared:/etc/data
   relay1:
     image: tor:latest
-    ports:
-      - "9002:9001"
-      - "9050:9050"
+    # ports:
+    #   - "9002:9001"
+    #   - "9050:9050"
     command: relay
     volumes:
       - tor-shared:/etc/data

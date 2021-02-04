@@ -1,0 +1,43 @@
+diff --git a/src/feature/dircache/dircache.c b/src/feature/dircache/dircache.c
+index ca127720f2..07f23e200e 100644
+--- a/src/feature/dircache/dircache.c
++++ b/src/feature/dircache/dircache.c
+@@ -270,7 +270,9 @@ client_likes_consensus(const struct consensus_cache_entry_t *ent,
+ 
+   smartlist_t *want_authorities = smartlist_new();
+   dir_split_resource_into_fingerprints(want_url, want_authorities, NULL, 0);
+-  need_at_least = smartlist_len(want_authorities)/2+1;
++  /* Replace line below. We want our consensus to be accepted without signatures. */
++  /* need_at_least = smartlist_len(want_authorities)/2+1; */
++  need_at_least = 0;
+ 
+   SMARTLIST_FOREACH_BEGIN(want_authorities, const char *, want_digest) {
+ 
+diff --git a/src/feature/nodelist/networkstatus.c b/src/feature/nodelist/networkstatus.c
+index e07d58c91c..7513aacdd3 100644
+--- a/src/feature/nodelist/networkstatus.c
++++ b/src/feature/nodelist/networkstatus.c
+@@ -1994,6 +1994,10 @@ networkstatus_set_current_consensus(const char *consensus,
+     goto done;
+   }
+ 
++  /* Skip check because, for our local testing, we don't care if the consensus
++     has been signed enough. */
++  goto done;
++
+   /* Make sure it's signed enough. */
+   if ((r=networkstatus_check_consensus_signature(c, 1))<0) {
+     if (r == -1) {
+diff --git a/src/lib/net/address.c b/src/lib/net/address.c
+index 6d46f9b955..ed448272cc 100644
+--- a/src/lib/net/address.c
++++ b/src/lib/net/address.c
+@@ -255,6 +255,8 @@ int
+ tor_addr_is_internal_(const tor_addr_t *addr, int for_listening,
+                       const char *filename, int lineno)
+ {
++  /* We want to allow internal IPs to run a local directory authority */
++  return 0;
+   uint32_t iph4 = 0;
+   uint32_t iph6[4];
+ 
