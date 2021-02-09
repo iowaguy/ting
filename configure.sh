@@ -74,8 +74,8 @@ mkdir data/w data/z data/client
 
 # Start Tor
 tor-0.4.4.6/src/app/tor -f configs/torrc-client
-tor-0.4.4.6/src/app/tor -f configs/torrc-w
-tor-0.4.4.6/src/app/tor -f configs/torrc-z
+# tor-0.4.4.6/src/app/tor -f configs/torrc-w
+# tor-0.4.4.6/src/app/tor -f configs/torrc-z
 
 cd ..
 
@@ -83,14 +83,32 @@ cd ..
 sleep 5
 
 # Determine the fingerprint of W and Z
-FP_W=$(cat ./tor/data/w/fingerprint | cut -f2 -d" ")
-FP_Z=$(cat ./tor/data/z/fingerprint | cut -f2 -d" ")
+# FP_W=$(cat ./tor/data/w/fingerprint | cut -f2 -d" ")
+# FP_Z=$(cat ./tor/data/z/fingerprint | cut -f2 -d" ")
 FP_C=$(cat ./tor/data/client/fingerprint | cut -f2 -d" ")
 
 
 ############
 ### TING ###
 ############
+
+# Generate default tingrc file
+# cat <<EOF > ./tingrc
+# SocksPort 9050
+# ControllerPort 9051
+# SourceAddr $MY_PUBLIC_IP
+# DestinationAddr $MY_PUBLIC_IP
+# DestinationPort 16667
+# NumSamples 200
+# NumRepeats 1
+# RelayList internet
+# RelayCacheTime 24
+# W $MY_PUBLIC_IP,$FP_W
+# Z $MY_PUBLIC_IP,$FP_Z
+# C $MY_PUBLIC_IP,$FP_C
+# SocksTimeout 60
+# MaxCircuitBuildAttempts 5
+# EOF
 
 # Generate default tingrc file
 cat <<EOF > ./tingrc
@@ -103,11 +121,12 @@ NumSamples 200
 NumRepeats 1
 RelayList internet
 RelayCacheTime 24
-W $MY_PUBLIC_IP,$FP_W
-Z $MY_PUBLIC_IP,$FP_Z
+W moria.csail.mit.edu,9695DFC35FFEB861329B9F1AB04C46397020CE31
+Z 46.165.245.154,749EF4A434DFD00DAB31E93DE86233FB916D31E3
 C $MY_PUBLIC_IP,$FP_C
 SocksTimeout 60
 MaxCircuitBuildAttempts 5
 EOF
+
 
 nohup ./echo_server &

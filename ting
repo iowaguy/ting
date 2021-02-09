@@ -24,7 +24,6 @@ import json
 import random
 import signal
 import urllib
-from struct import pack, unpack
 from select import select
 import glob
 
@@ -92,8 +91,8 @@ class TingClient():
         self.flush_to_file = flush_to_file
         self.parse_relay_list(config['RelayList'], int(config['RelayCacheTime']))
         self.controller = self.initialize_controller()
-        success("Controller initialized on port {0}. Talking to Tor on port {1}.".format(self.controller_port,
-                                                                                         self.socks_port))
+        success(f"Controller initialized on port {self.controller_port}. \
+                  Talking to Tor on port {self.socks_port}.")
         self.setup_job_queue(config['Pair'], config['InputFile'])
         if 'ResultDirectory' in config:
             global RESULT_DIRECTORY
@@ -117,7 +116,8 @@ class TingClient():
             try:
                 self.controller.attach_stream(event.id, self.curr_cid)
             except (OperationFailed, InvalidRequest) as e:
-                warning("Failed to attach stream to %s, unknown circuit. Closing stream..." % self.curr_cid)
+                warning("Failed to attach stream to %s, unknown circuit.\
+                         Closing stream..." % self.curr_cid)
                 print("\tResponse Code: %s " % str(e.code))
                 print("\tMessage: %s" % str(e.message))
                 self.controller.close_stream(event.id)
@@ -126,7 +126,7 @@ class TingClient():
         def probe_stream(event):
             if event.status == 'DETACHED':
                 if hasattr(self, 'curr_cid'):
-                    warning("Stream Detached from circuit {0}...".format(self.curr_cid))
+                    warning(f"Stream Detached from circuit {self.curr_cid}...")
                 else:
                     warning("Stream Detached from circuit...")
                 print("\t" + str(vars(event)))
@@ -138,11 +138,14 @@ class TingClient():
 
     # Tell socks to use tor as a proxy
     def setup_proxy(self):
-        socks.set_proxy(SOCKS_TYPE, SOCKS_HOST, self.socks_port)
-        socket.socket = socks.socksocket
-        sock = socks.socksocket()
-        sock.settimeout(self.socks_timeout)
-        return sock
+        s = socks.socksocket()
+        s.set_proxy(SOCKS_TYPE, SOCKS_HOST, self.socks_port)
+        s.settimeout(self.socks_timeout)
+        # socks.set_default_proxy(SOCKS_TYPE, SOCKS_HOST, self.socks_port)
+        # socket.socket = socks.socksocket
+        # sock = socks.socksocket()
+        # sock.settimeout(self.socks_timeout)
+        return s
 
     def parse_relay_list(self, relay_source, relay_cache_time):
         data = None
@@ -263,7 +266,7 @@ class TingClient():
     # Return array of times measured
     def ting(self, name):
         arr, num_seen = [], 0
-        msg, done = pack("!c", "!"), pack("!c", "X")
+        msg, done = bytes("!c!", "utf-8"), bytes("!cX", "utf-8")
 
         try:
             print("\tTrying to connect..")
@@ -388,25 +391,9 @@ class TingClient():
 
         self.controller.close()
 
-def main():
-    ########## CONFIG START ##########
-    parser = argparse.ArgumentParser(prog='ting', description="Measure latency between either a pair of Tor relays (relay1,relay2), or a list of pairs, specified with the --input-file argument.")
-    parser.add_argument('relay1', help="Tor relay identified by IP or Fingerprint",
-                        nargs='?', default=None)
-    parser.add_argument('relay2', help="Tor relay identified by IP or Fingerprint",
-                        nargs='?', default=None)
-    parser.add_argument('--output-file', help="store detailed results of run in JSON (default none)")
-    parser.add_argument('--dest-port', help="port of local echo server (default 16667)")
-    parser.add_argument('--num-samples', help="number of samples for each circuit (default 200)", type=int)
-    parser.add_argument('--num-repeats', help="number of times to measure each pair (default 1)", type=int)
-    parser.add_argument('--config-file', help="specify a file to read configuration options from (default ./tingrc)",
-                        default="tingrc")
-    parser.add_argument('--input-file', help="read list of relay pairs to measure from file, which contains one space-separated pair of fingerprints or ips per line (default none)")
-    parser.add_argument('--log-level', choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'],
-                        default='INFO', help='The log level.')
-    args = parser.parse_args()
+def main(args):
     
-    logging.basicConfig(level=args.log_level)
+    logging.basicConfig(level=getattr(logging, args.log_level.upper()))
     try:
         f = open(args.config_file)
     except IOError:
@@ -468,4 +455,24 @@ def main():
     flush_to_file()
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(prog='ting',
+                                     description="Measure latency between either a pair of Tor relays\
+                                                  (relay1,relay2), or a list of pairs, specified with\
+                                                  the --input-file argument.")
+    parser.add_argument('relay1', help="Tor relay identified by IP or Fingerprint",
+                        nargs='?', default=None)
+    parser.add_argument('relay2', help="Tor relay identified by IP or Fingerprint",
+                        nargs='?', default=None)
+    parser.add_argument('--output-file', help="store detailed results of run in JSON (default none)")
+    parser.add_argument('--dest-port', help="port of local echo server (default 16667)")
+    parser.add_argument('--num-samples', help="number of samples for each circuit (default 200)", type=int)
+    parser.add_argument('--num-repeats', help="number of times to measure each pair (default 1)", type=int)
+    parser.add_argument('--config-file', help="specify a file to read configuration options from (default ./tingrc)",
+                        default="tingrc")
+    parser.add_argument('--input-file', help="read list of relay pairs to measure from file, which contains\
+                                              one space-separated pair of fingerprints or ips per line (default none)")
+    parser.add_argument('--log-level', choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'],
+                        default='INFO', help='The log level.')
+    args = parser.parse_args()
+
+    main(args)
