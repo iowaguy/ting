@@ -13,3 +13,5 @@
 *.pyc
 
 data/
+/tingrc
+cache/

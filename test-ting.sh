@@ -41,19 +41,20 @@ start() {
 }
 
 ting() {
-  local fingerprint_relay_w=$(cat ${CHUTNEY_NODES}/003r/fingerprint)
-  local fingerprint_relay_x=$(cat ${CHUTNEY_NODES}/004r/fingerprint)
-  local fingerprint_relay_y=$(cat ${CHUTNEY_NODES}/005r/fingerprint)
-  local fingerprint_relay_z=$(cat ${CHUTNEY_NODES}/006r/fingerprint)
+  local fingerprint_relay_w=$(cat ${CHUTNEY_NODES}/003r/fingerprint | awk '{print $2}')
+  local fingerprint_relay_x=$(cat ${CHUTNEY_NODES}/004r/fingerprint | awk '{print $2}')
+  local fingerprint_relay_y=$(cat ${CHUTNEY_NODES}/005r/fingerprint | awk '{print $2}')
+  local fingerprint_relay_z=$(cat ${CHUTNEY_NODES}/006r/fingerprint | awk '{print $2}')
   # local fingerprint_client=$(cat ${CHUTNEY_NODES}/008c/fingerprint)
 
-  local host=$(hostname -i)
+  local host=$(hostname -i | awk '{print $1}')
+
   # Generate default tingrc file
   cat <<EOF > ./${TING_CONFIG_FILE}
 SocksPort 9050
 ControllerPort 9051
-SourceAddr $MY_PUBLIC_IP
-DestinationAddr $MY_PUBLIC_IP
+SourceAddr $host
+DestinationAddr $host
 DestinationPort 16667
 NumSamples 200
 NumRepeats 1

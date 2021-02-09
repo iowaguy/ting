@@ -1,17 +1,12 @@
 # TING Refresh
 
-## Dependencies
-* docker (https://www.docker.com/get-started)
+## Testing Ting
 
-## Running
 ``` shell
-./tingenv build
-./tingenv run
-```
-
-From inside the docker environment,
-``` shell
-./configure.sh
+./test-ting.sh configure
+./test-ting.sh start
+./test-ting.sh ting
+./test-ting.sh stop
 ```
 
 # TING Original Docs
