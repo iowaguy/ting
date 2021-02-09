@@ -11,6 +11,7 @@ from stem import (
     CircuitExtensionFailed,
 )
 from stem.control import Controller, EventType
+import stem.descriptor.remote
 import sys
 from random import choice, shuffle
 import os
@@ -165,6 +166,28 @@ class TingClient:
         s.settimeout(self.socks_timeout)
         return s
 
+    def __download_dummy_consensus(self):
+        try:
+            self.relay_list = {}
+            self.fp_to_ip = {}
+            for descriptor in stem.descriptor.remote.get_consensus(
+                endpoints=(stem.ORPort("127.0.0.1", 5000),)
+            ):
+                self.fp_to_ip[
+                    descriptor.fingerprint.encode("ascii", "ignore")
+                ] = "127.0.0.1"
+        except Exception as exc:
+            print("Unable to retrieve the consensus: %s" % exc)
+
+    def __load_consensus(self, data):
+        self.relay_list = {}
+        self.fp_to_ip = {}
+        for relay in data["relays"]:
+            if "or_addresses" in relay:
+                ip = relay["or_addresses"][0].split(":")[0]
+                self.relay_list[ip] = relay["fingerprint"].encode("ascii", "ignore")
+                self.fp_to_ip[relay["fingerprint"].encode("ascii", "ignore")] = ip
+
     def parse_relay_list(self, relay_source, relay_cache_time):
         data = None
         if relay_source.lower() == "internet":
@@ -201,22 +224,16 @@ class TingClient:
                     os.mkdir("./cache")
                 with open(new_cache_file, "w") as f:
                     f.write(json.dumps(data))
+            self.__load_consensus(data)
+        elif relay_source.lower() == "test":
+            self.__download_dummy_consensus()
         else:
             with open(relay_source) as f:
                 r = f.read()
                 data = json.loads(r)
+                self.__load_consensus(data)
 
-        self.relay_list = {}
-        self.fp_to_ip = {}
-        for relay in data["relays"]:
-            if "or_addresses" in relay:
-                ip = relay["or_addresses"][0].split(":")[0]
-                self.relay_list[ip] = relay["fingerprint"].encode("ascii", "ignore")
-                self.fp_to_ip[relay["fingerprint"].encode("ascii", "ignore")] = ip
-
-        success(
-            "There are {0} currently running Tor nodes.".format(len(self.relay_list))
-        )
+        success("There are {0} currently running Tor nodes.".format(len(self.fp_to_ip)))
 
     def setup_job_queue(self, pair, input_file):
         self.job_queue = queue.Queue()

@@ -9,6 +9,11 @@
 ./test-ting.sh stop
 ```
 
+The `RelayList` parameter can be either `internet` or `test`. If `internet` is
+used, the consensus will be downloaded from directory authorities of the
+_actual_ Tor network. If `test` is supplied, a local directory authority will be
+used.
+
 # TING Original Docs
 Version: 1.0
 Released: Friday, November 6, 2015

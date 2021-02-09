@@ -58,7 +58,7 @@ DestinationAddr $host
 DestinationPort 16667
 NumSamples 200
 NumRepeats 1
-RelayList internet
+RelayList test
 RelayCacheTime 24
 W ${host},${fingerprint_relay_w}
 Z ${host},${fingerprint_relay_z}
