@@ -51,8 +51,8 @@ ting() {
 
   # Generate default tingrc file
   cat <<EOF > ./${TING_CONFIG_FILE}
-SocksPort 9050
-ControllerPort 9051
+SocksPort 9008
+ControllerPort 8008
 SourceAddr $host
 DestinationAddr $host
 DestinationPort 16667
