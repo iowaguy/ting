@@ -1,0 +1,90 @@
+#+title: ting interface
+
+The Ting code will be accessible through a =ting= module. The following will be
+the public functions.
+
+#+begin_src python
+  def ting(measurement_targets, source_addr=None, max_circuit_build_attempts=5
+           num_samples=10, relay_w_fp=None, relay_z_fp=None, relay_list="test"
+           start_echo_server=False):
+    """
+    Measure latencies between relays x and y (using Ting's terminology).
+
+    :param list measurement_targets: (Required) A list of (fingerprint, fingerprint) tuples that will be measured.
+    :param str relay_w_fp: (Optional) The fingerprint of relay_w. If not provided,
+                                      a relay will be spun up on the localhost.
+    :param str relay_z_fp: (Optional) The fingerprint of relay_z. If not provided,
+                                      a relay will be spun up on the localhost.
+    :param str source_addr: (Optional) The public hostname of the machine the tests are running from. If not
+                                       provided, we'll try to guess.
+    :param int max_circuit_build_attempts: (Optional) The number of attempts to build a circuit
+                                                      before reporting a failure.
+    :param int dest_port: (Optional) The port that the sample application is using. Defaults to 16667.
+    :param int num_samples: (Optional) The number of measurements to take on a single circuit.
+    :param str relay_list: (Optional) Must be one of "test", or "internet". This determines where the list
+                                      of relays should come from. If "internet" is used, then the list should
+                                      come from the live Tor directory authorities. If "test" is used, the
+                                      list should come from a local directory authority that only knows about
+                                      local relays.
+    :param bool start_echo_server: (Optional) Start the dummy server that our client will be connecting to
+                                              through Tor.
+
+    :returns: **dict** with latencies for each full circuit, and partial circuit
+
+    Sample:
+    {[
+       {"xy":[###, ###, ..., ###],
+        "x":[###, ###, ..., ###],
+        "y":[###, ###, ..., ###]},
+       ...
+     ]}
+    """
+
+  def start_local_relay():
+    """
+    This will start a local relay that can be used as relay "w" or "z" in the :func:`~Ting.ting` method.
+    """
+
+  def start_echo_server(block=True):
+    """
+    Start the dummy server that our client will be connecting to through Tor.
+
+    :param bool relay_x_fp: (Optional) If **False**, return immediately and leave server running
+                                       in the background.
+    """
+
+  def stop_echo_server():
+    """
+    Stop the dummy server that our client was connecting to.
+    """
+
+#+end_src
+
+* Optional arguments that will be accepted as kwargs
+** For =ting()=
+- dest_port=16667
+- socks_port=9008
+- controller_port=8008
+- num_repeats=1 # the number of times to run all the measurements of a particular circuit
+- relay_cache_time=24 # how long to keep the consensus cached
+- socks_timeout=60
+- log_level=warn
+
+** For =start_local_relay()=
+- avoid_disk_writes=1
+- control_port=9151
+- cookie_authentication=1
+- learn_circuit_build_timeout=0
+- data_directory=$PWD/data/w
+- or_port=9001
+- dir_req_statistics=0
+- use_micro_descriptors=0
+- download_extra_info=1
+- log_level=warn
+- socks_listen_address=127.0.0.1
+- socks_port=9150
+- warn_unsafe_socks=0
+- exit_policy_reject_private=0
+- exit_policy="accept $MY_PUBLIC_IP:16667,reject *:*"
+- run_as_daemon=1
+- publish_server_descriptor=1
