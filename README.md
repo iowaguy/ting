@@ -3,10 +3,10 @@
 ## Testing Ting
 
 ``` shell
-./test-ting.sh configure
-./test-ting.sh start
-./test-ting.sh ting
-./test-ting.sh stop
+./test-ting configure
+./test-ting start
+./test-ting ting
+./test-ting stop
 ```
 
 The `RelayList` parameter can be either `internet` or `test`. If `internet` is
