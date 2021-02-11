@@ -346,11 +346,7 @@ class TingClient:
                 num_seen += 1
 
             self.tor_sock.send(done)
-            try:
-                self.tor_sock.shutdown(socket.SHUT_RDWR)
-            except:
-                pass
-            self.tor_sock.close()
+            self._shutdown_socket()
 
             return [round((x * 1000), 5) for x in arr]
 
@@ -361,11 +357,8 @@ class TingClient:
                 + "\nClosing connection."
             )
             if self.tor_sock:
-                try:
-                    self.tor_sock.shutdown(socket.SHUT_RDWR)
-                except:
-                    pass
-                self.tor_sock.close()
+                self._shutdown_socket()
+
             self.daily_socks_errors += 1
             raise CircuitConnectionException(
                 "Failed to connect using the given circuit: ", name, str(e)
@@ -448,7 +441,7 @@ class TingClient:
                         )
                     )
                     result["trials"].append(trial)
-                consecutive_fails = 0
+                    consecutive_fails = 0
 
             except Exception as err:
                 consecutive_fails += 1
@@ -471,7 +464,14 @@ class TingClient:
             self.flush_to_file()
             self.try_daily_update()
 
-        self.controller.close()
+        self._shutdown_socket()
+
+    def _shutdown_socket(self):
+        try:
+            self.tor_sock.shutdown(socket.SHUT_RDWR)
+        except:
+            pass
+        self.tor_sock.close()
 
 
 def main(args):
