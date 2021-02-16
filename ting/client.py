@@ -1,8 +1,15 @@
-#!/usr/bin/python3
-
-import logging
-import time
+from datetime import datetime
+import glob
+import json
+import os
+import os.path
+import queue
+from random import choice
 import socket
+import time
+import urllib
+
+import socks
 from stem import (
     CircStatus,
     OperationFailed,
@@ -12,84 +19,12 @@ from stem import (
 )
 from stem.control import Controller, EventType
 import stem.descriptor.remote
-import sys
-from random import choice, shuffle
-import os
-import subprocess
-from pprint import pprint
-import queue
-import inspect
-import re
-from datetime import datetime
-import argparse
-import traceback
-import os.path
-from os.path import join, dirname, isfile
+import ting.ting
+import ting.logging
+from ting.exceptions import NotReachableException, CircuitConnectionException
 
-sys.path.append(join(dirname(__file__), "libs"))
-import socks
-import json
-import random
-import signal
-import urllib
-from select import select
-import glob
-
-SOCKS_HOST = "127.0.0.1"
 SOCKS_TYPE = socks.SOCKS5
-RESULT_DIRECTORY = "results"
-EMAIL_ADDR = None  # set this to your email address to get email notifications
-
-
-class Color:
-    HEADER = "\033[95m"
-    BLUE = "\033[94m"
-    SUCCESS = "\033[92m"
-    WARNING = "\033[93m"
-    FAIL = "\033[91m"
-    END = "\033[0m"
-
-
-def success(msg):
-    print(msg, flush=True)
-
-
-def warning(msg):
-    logging.warning(msg)
-
-
-def failure(msg):
-    logging.critical(msg)
-    sys.exit(-1)
-
-
-def log(msg):
-    logging.info(msg)
-
-
-def notify(type, msg):
-    if EMAIL_ADDR:
-        os.system(
-            "echo '{0}' | mailx -s 'Ting {1}' '{2}'".format(msg, type, EMAIL_ADDR)
-        )
-
-
-def get_current_log():
-    return RESULT_DIRECTORY + "/" + str(datetime.now()).split()[0] + ".json"
-
-
-class NotReachableException(Exception):
-    def __init__(self, msg, func, dest):
-        self.msg = msg
-        self.func = func
-        self.dest = dest
-
-
-class CircuitConnectionException(Exception):
-    def __init__(self, msg, circuit, exc):
-        self.msg = msg
-        self.circuit = circuit
-        self.exc = exc
+SOCKS_HOST = "127.0.0.1"
 
 
 class TingClient:
@@ -110,7 +45,7 @@ class TingClient:
         self.flush_to_file = flush_to_file
         self.parse_relay_list(config["RelayList"], int(config["RelayCacheTime"]))
         self.controller = self.initialize_controller()
-        success(
+        ting.logging.success(
             f"Controller initialized on port {self.controller_port}. \
                   Talking to Tor on port {self.socks_port}."
         )
@@ -136,7 +71,7 @@ class TingClient:
             try:
                 self.controller.attach_stream(event.id, self.curr_cid)
             except (OperationFailed, InvalidRequest) as e:
-                warning(
+                ting.logging.warning(
                     "Failed to attach stream to %s, unknown circuit.\
                          Closing stream..."
                     % self.curr_cid
@@ -149,9 +84,11 @@ class TingClient:
         def probe_stream(event):
             if event.status == "DETACHED":
                 if hasattr(self, "curr_cid"):
-                    warning(f"Stream Detached from circuit {self.curr_cid}...")
+                    ting.logging.warning(
+                        f"Stream Detached from circuit {self.curr_cid}..."
+                    )
                 else:
-                    warning("Stream Detached from circuit...")
+                    ting.logging.warning("Stream Detached from circuit...")
                 print("\t" + str(vars(event)))
             if event.status == "NEW" and event.purpose == "USER":
                 attach_stream(event)
@@ -200,7 +137,7 @@ class TingClient:
                 )
                 hours_since_last = (datetime.now() - most_recent_time).seconds / 60 / 60
                 if hours_since_last <= relay_cache_time:
-                    log(
+                    ting.logging.log(
                         "Found list of relays in cache that is {0} hours old. Using that...".format(
                             hours_since_last
                         )
@@ -209,7 +146,7 @@ class TingClient:
                         r = f.read()
                         data = json.loads(r)
             if not data:
-                log(
+                ting.logging.log(
                     "Downloading current list of relays.. (this may take a few seconds)"
                 )
                 data = json.load(
@@ -233,7 +170,9 @@ class TingClient:
                 data = json.loads(r)
                 self.__load_consensus(data)
 
-        success("There are {0} currently running Tor nodes.".format(len(self.fp_to_ip)))
+        ting.logging.success(
+            "There are {0} currently running Tor nodes.".format(len(self.fp_to_ip))
+        )
 
     def setup_job_queue(self, pair, input_file):
         self.job_queue = queue.Queue()
@@ -308,17 +247,19 @@ class TingClient:
 
         while failures < self.max_circuit_builds:
             try:
-                log("Building circuit...")
+                ting.logging.log("Building circuit...")
                 cid = self.controller.new_circuit(circ, await_build=True)
-                success("Circuit built successfully.")
+                ting.logging.success("Circuit built successfully.")
                 return cid
 
             except (InvalidRequest, CircuitExtensionFailed) as exc:
                 failures += 1
                 if "message" in vars(exc):
-                    warning("{0}".format(vars(exc)["message"]))
+                    ting.logging.warning("{0}".format(vars(exc)["message"]))
                 else:
-                    warning("Circuit failed to be created, reason unknown.")
+                    ting.logging.warning(
+                        "Circuit failed to be created, reason unknown."
+                    )
                 if cid is not None:
                     self.controller.close_circuit(cid)
                 last_exception = exc
@@ -335,7 +276,11 @@ class TingClient:
         try:
             print("\tTrying to connect..")
             self.tor_sock.connect((self.destination_addr, self.destination_port))
-            print(Color.SUCCESS + "\tConnected successfully!" + Color.END)
+            print(
+                ting.logging.Color.SUCCESS
+                + "\tConnected successfully!"
+                + ting.logging.Color.END
+            )
 
             while num_seen < self.num_samples:
                 start_time = time.time()
@@ -351,7 +296,7 @@ class TingClient:
             return [round((x * 1000), 5) for x in arr]
 
         except socket.error as e:
-            warning(
+            ting.logging.warning(
                 "Failed to connect using the given circuit: "
                 + str(e)
                 + "\nClosing connection."
@@ -402,11 +347,11 @@ class TingClient:
             result["time_start"] = str(datetime.now()).split()[1]
             result["trials"] = []
 
-            log("Measuring new pair: {0}->{1}".format(x, y))
+            ting.logging.log("Measuring new pair: {0}->{1}".format(x, y))
 
             try:
                 for i in range(self.num_repeats):
-                    log("Iteration %d" % (i + 1))
+                    ting.logging.log("Iteration %d" % (i + 1))
 
                     trial = {}
                     trial["start_time"] = str(datetime.now())
@@ -414,7 +359,7 @@ class TingClient:
 
                     for (circ, name) in circs:
                         trial[name] = {}
-                        log("Tinging " + name)
+                        ting.logging.log("Tinging " + name)
                         start_build = time.time()
                         cid = self.build_circuits(circ)
                         self.curr_cid = cid
@@ -425,17 +370,20 @@ class TingClient:
                         self.tor_sock = self.setup_proxy()
 
                         start_ting = time.time()
-                        ting = self.ting(name)
+                        ting_results = self.ting(name)
                         trial[name]["ting_time"] = round((time.time() - start_ting), 5)
-                        trial[name]["measurements"] = ting
-                        log("Ting complete, min for this circuit: %fms" % min(ting))
+                        trial[name]["measurements"] = ting_results
+                        ting.logging.log(
+                            "Ting complete, min for this circuit: %fms"
+                            % min(ting_results)
+                        )
 
                     trial["rtt"] = (
                         min(trial["xy"]["measurements"])
                         - (min(trial["x"]["measurements"]) / 2)
                         - (min(trial["y"]["measurements"]) / 2)
                     )
-                    success(
+                    ting.logging.success(
                         "Predicted RTT between {0}->{1}: {2}ms".format(
                             x, y, trial["rtt"]
                         )
@@ -448,8 +396,10 @@ class TingClient:
                 result["error"] = {}
                 result["error"]["type"] = err.__class__.__name__
                 result["error"]["details"] = str(err)
-                warning("{0}: {1}".format(err.__class__.__name__, str(err)))
-                log("Cooling down for five seconds...")
+                ting.logging.warning(
+                    "{0}: {1}".format(err.__class__.__name__, str(err))
+                )
+                ting.logging.log("Cooling down for five seconds...")
                 time.sleep(5)
 
             if consecutive_fails >= 5:
@@ -472,126 +422,3 @@ class TingClient:
         except:
             pass
         self.tor_sock.close()
-
-
-def main(args):
-
-    logging.basicConfig(level=getattr(logging, args.log_level.upper()))
-    try:
-        f = open(args.config_file)
-    except IOError:
-        failure("Couldn't find a tingrc config file. Try running ./configure.sh")
-    log("Read config file " + args.config_file)
-    r = f.readlines()
-    f.close()
-
-    config = {}
-    for l in r:
-        pair = l.strip().split()
-
-        try:
-            config[pair[0]] = int(pair[1])
-        except ValueError:
-            config[pair[0]] = pair[1]
-    if not "InputFile" in config:
-        config["InputFile"] = None
-
-    arg_overrides = [
-        (args.num_repeats, "NumRepeats"),
-        (args.num_samples, "NumSamples"),
-        (args.dest_port, "DestinationPort"),
-        (args.input_file, "InputFile"),
-        (args.output_file, "ResultsDirectory"),
-    ]
-
-    for override in arg_overrides:
-        if not override[0] is None:
-            try:
-                config[override[1]] = int(override[0])
-            except ValueError:
-                config[override[1]] = override[0]
-
-    if args.relay1 and args.relay2:
-        config["Pair"] = (args.relay1, args.relay2)
-    else:
-        config["Pair"] = None
-
-    ########## CONFIG END ##########
-
-    results_queue = queue.Queue()
-
-    def catch_sigint(signal, frame):
-        flush_to_file()
-        sys.exit(0)
-
-    # Flush anything waiting to be written to the output file on its own line
-    # Accumulating all the results will be done post-processing
-    def flush_to_file():
-        while not results_queue.empty():
-            result = results_queue.get(False)
-            with open(get_current_log(), "a") as f:
-                f.write(json.dumps(result))
-                f.write("\n")
-
-    signal.signal(
-        signal.SIGINT, catch_sigint
-    )  # Still write output even if process killed
-
-    worker = TingClient(config, results_queue, flush_to_file)
-    worker.run()
-
-    flush_to_file()
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        prog="ting",
-        description="Measure latency between either a pair of Tor relays\
-                                                  (relay1,relay2), or a list of pairs, specified with\
-                                                  the --input-file argument.",
-    )
-    parser.add_argument(
-        "relay1",
-        help="Tor relay identified by IP or Fingerprint",
-        nargs="?",
-        default=None,
-    )
-    parser.add_argument(
-        "relay2",
-        help="Tor relay identified by IP or Fingerprint",
-        nargs="?",
-        default=None,
-    )
-    parser.add_argument(
-        "--output-file", help="store detailed results of run in JSON (default none)"
-    )
-    parser.add_argument("--dest-port", help="port of local echo server (default 16667)")
-    parser.add_argument(
-        "--num-samples",
-        help="number of samples for each circuit (default 200)",
-        type=int,
-    )
-    parser.add_argument(
-        "--num-repeats",
-        help="number of times to measure each pair (default 1)",
-        type=int,
-    )
-    parser.add_argument(
-        "--config-file",
-        help="specify a file to read configuration options from (default ./tingrc)",
-        default="tingrc",
-    )
-    parser.add_argument(
-        "--input-file",
-        help="read list of relay pairs to measure from file, which contains\
-                                              one space-separated pair of fingerprints or ips per line (default none)",
-    )
-    parser.add_argument(
-        "--log-level",
-        choices=["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"],
-        default="INFO",
-        help="The log level.",
-    )
-    args = parser.parse_args()
-
-    main(args)
