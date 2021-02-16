@@ -1,7 +1,12 @@
 #!/usr/bin/python3
 
 import argparse
+import contextlib
+
+import ting.echo_server
 import ting.ting
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -54,4 +59,5 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    ting.ting.main(args)
+    with ting.echo_server.echo_server():
+        ting.ting.main(args)

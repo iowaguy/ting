@@ -68,11 +68,11 @@ MaxCircuitBuildAttempts 5
 EOF
 
   grep DirAuthority ${CHUTNEY_PATH}/net/nodes/000a/torrc >> ./${TING_CONFIG_FILE}
-  ./echo_server &
+  # ./echo_server &
 
   ./ting_runner.py ${fingerprint_relay_x} ${fingerprint_relay_y}
 
-  kill_echo_server
+  # kill_echo_server
 }
 
 stop() {

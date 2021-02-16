@@ -10,3 +10,8 @@ class CircuitConnectionException(Exception):
         self.msg = msg
         self.circuit = circuit
         self.exc = exc
+
+class MissingParameterException(Exception):
+    def __init__(self, msg):
+        self.msg = msg
+        
