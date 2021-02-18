@@ -285,14 +285,15 @@ class TingClient:
 
             while num_seen < self.num_samples:
                 start_time = time.time()
-                logging.debug("Sending message: %s", msg)
+                logging.debug("Tinging. Sample #%s", num_seen+1)
                 self.tor_sock.send(msg)
-                self.tor_sock.recv(1)
+                self.tor_sock.recv(1024)
                 end_time = time.time()
                 arr.append((end_time - start_time))
                 num_seen += 1
+                # time.sleep(1)
 
-            logging.debug("Sending message: %s", done)
+            logging.debug("Ending ting after %s sample(s)", num_seen)
             self.tor_sock.send(done)
             self._shutdown_socket()
 

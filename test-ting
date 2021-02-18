@@ -56,7 +56,7 @@ ControllerPort 8008
 SourceAddr $host
 DestinationAddr $host
 DestinationPort 16667
-NumSamples 1
+NumSamples 10
 NumRepeats 1
 RelayList test
 RelayCacheTime 24
@@ -68,11 +68,8 @@ MaxCircuitBuildAttempts 5
 EOF
 
   grep DirAuthority ${CHUTNEY_PATH}/net/nodes/000a/torrc >> ./${TING_CONFIG_FILE}
-  # ./echo_server &
 
-  ./ting_runner.py --log-level DEBUG ${fingerprint_relay_x} ${fingerprint_relay_y}
-
-  # kill_echo_server
+  ./ting_runner.py --log-level WARNING ${fingerprint_relay_x} ${fingerprint_relay_y}
 }
 
 stop() {

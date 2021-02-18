@@ -34,6 +34,7 @@ class EchoServer(StoppableThread):
                     data = sock.recv(EchoServer.__MESSAGE_SIZE)
                     logging.debug("data recieved=%s", data)
                     while data and (str(bytes("!c", "utf-8") + data)) != "X":
+                        logging.debug("Echoing data: %s", data)
                         sock.send(data)
                         data = sock.recv(EchoServer.__MESSAGE_SIZE)
                     sock.close()
@@ -51,6 +52,10 @@ class EchoServer(StoppableThread):
         logging.info("TCP echo server listening on port %i", port)
         return sock
 
+    @classmethod
+    def is_running(cls):
+        """Return True if echo server is running locally."""
+        raise NotImplementedError("TODO EchoServer.is_running needs to be implemented")
 
 @contextmanager
 def echo_server():
