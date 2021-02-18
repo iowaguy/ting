@@ -1,6 +1,7 @@
 from datetime import datetime
 import glob
 import json
+import logging
 import os
 import os.path
 import queue
@@ -20,7 +21,7 @@ from stem import (
 from stem.control import Controller, EventType
 import stem.descriptor.remote
 import ting.ting
-import ting.logging
+from ting.logging import success, notify, failure
 from ting.exceptions import NotReachableException, CircuitConnectionException
 
 SOCKS_TYPE = socks.SOCKS5
@@ -284,12 +285,14 @@ class TingClient:
 
             while num_seen < self.num_samples:
                 start_time = time.time()
+                logging.debug("Sending message: %s", msg)
                 self.tor_sock.send(msg)
-                data = self.tor_sock.recv(1)
+                self.tor_sock.recv(1)
                 end_time = time.time()
                 arr.append((end_time - start_time))
                 num_seen += 1
 
+            logging.debug("Sending message: %s", done)
             self.tor_sock.send(done)
             self._shutdown_socket()
 
@@ -416,8 +419,10 @@ class TingClient:
 
         self._shutdown_socket()
 
+
     def _shutdown_socket(self):
         try:
+            logging.debug("Shutting down Tor socket")
             self.tor_sock.shutdown(socket.SHUT_RDWR)
         except:
             pass

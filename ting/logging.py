@@ -1,4 +1,8 @@
+"""Logging functions used by Ting."""
+
 import logging
+import os
+import sys
 
 EMAIL_ADDR = None  # set this to your email address to get email notifications
 
@@ -28,9 +32,12 @@ def failure(msg):
 def log(msg):
     logging.info(msg)
 
+def debug(msg):
+    logging.debug(msg)
 
-def notify(type, msg):
+def notify(msg_type, msg):
+    """Email notification to email provided in tingrc."""
     if EMAIL_ADDR:
         os.system(
-            "echo '{0}' | mailx -s 'Ting {1}' '{2}'".format(msg, type, EMAIL_ADDR)
+            "echo '{0}' | mailx -s 'Ting {1}' '{2}'".format(msg, msg_type, EMAIL_ADDR)
         )

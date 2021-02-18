@@ -2,10 +2,10 @@
 
 import argparse
 import contextlib
+import logging
 
 import ting.echo_server
 import ting.ting
-
 
 
 if __name__ == "__main__":
@@ -58,6 +58,9 @@ if __name__ == "__main__":
         help="The log level.",
     )
     args = parser.parse_args()
+
+    logger = logging.getLogger()
+    logger.setLevel(level=getattr(logging, args.log_level.upper()))
 
     with ting.echo_server.echo_server():
         ting.ting.main(args)
