@@ -14,6 +14,17 @@ used, the consensus will be downloaded from directory authorities of the
 _actual_ Tor network. If `test` is supplied, a local directory authority will be
 used.
 
+## API Docs
+To generate documentation, install `pdoc`
+``` shell
+pip install pdoc
+```
+
+Then run
+``` shell
+scripts/generate-docs
+```
+
 # TING Original Docs
 Version: 1.0
 Released: Friday, November 6, 2015

@@ -1,19 +1,23 @@
 #!/usr/bin/python3
 
 import argparse
-import contextlib
 import logging
+import sys
+from os.path import realpath, dirname
 
-import ting.echo_server
-import ting.ting
+script_dir = dirname(realpath(__file__))
+
+# This line is required so I can use the ting module
+sys.path.append(script_dir + '/../')
+import ting.cli
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="ting",
         description="Measure latency between either a pair of Tor relays\
-                                                  (relay1,relay2), or a list of pairs, specified with\
-                                                  the --input-file argument.",
+                     (relay1,relay2), or a list of pairs, specified with\
+                     the --input-file argument.",
     )
     parser.add_argument(
         "relay1",
@@ -28,9 +32,13 @@ if __name__ == "__main__":
         default=None,
     )
     parser.add_argument(
-        "--output-file", help="store detailed results of run in JSON (default none)"
+        "--output-file",
+        help="store detailed results of run in JSON (default none)"
     )
-    parser.add_argument("--dest-port", help="port of local echo server (default 16667)")
+    parser.add_argument(
+        "--dest-port",
+        help="port of local echo server (default 16667)"
+    )
     parser.add_argument(
         "--num-samples",
         help="number of samples for each circuit (default 200)",
@@ -62,6 +70,4 @@ if __name__ == "__main__":
 
     logger = logging.getLogger()
     logger.setLevel(level=getattr(logging, args.log_level.upper()))
-
-    with ting.echo_server.echo_server():
-        ting.ting.main(args)
+    ting.cli.main(args)

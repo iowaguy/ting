@@ -4,14 +4,13 @@ class NotReachableException(Exception):
         self.func = func
         self.dest = dest
 
-
 class CircuitConnectionException(Exception):
     def __init__(self, msg, circuit, exc):
         self.msg = msg
         self.circuit = circuit
         self.exc = exc
 
-class MissingParameterException(Exception):
-    def __init__(self, msg):
+class TingException(Exception):
+    def __init__(self, msg, exc):
         self.msg = msg
-        
+        self.exc = exc

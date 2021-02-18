@@ -8,6 +8,7 @@ EMAIL_ADDR = None  # set this to your email address to get email notifications
 
 
 class Color:
+    """Useful color codes."""
     HEADER = "\033[95m"
     BLUE = "\033[94m"
     SUCCESS = "\033[92m"
@@ -25,6 +26,7 @@ def warning(msg):
 
 
 def failure(msg):
+    """Log a critical failure and exit."""
     logging.critical(msg)
     sys.exit(-1)
 
@@ -36,8 +38,9 @@ def debug(msg):
     logging.debug(msg)
 
 def notify(msg_type, msg):
-    """Email notification to email provided in tingrc."""
+    """Send email alert."""
     if EMAIL_ADDR:
         os.system(
-            "echo '{0}' | mailx -s 'Ting {1}' '{2}'".format(msg, msg_type, EMAIL_ADDR)
+            "echo '{0}' | mailx -s 'Ting {1}' '{2}'".format(msg, msg_type,
+                                                            EMAIL_ADDR)
         )

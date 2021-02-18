@@ -6,6 +6,7 @@ CHUTNEY_REPO=https://git.torproject.org/chutney.git
 NETWORK_SPECS=${CHUTNEY_PATH}/networks/basic
 CHUTNEY_NODES=${CHUTNEY_PATH}/net/nodes
 TING_CONFIG_FILE=tingrc
+SCRIPTS=./scripts
 
 kill_all() {
   ps -ef | grep $1 | grep -v grep | awk '{print $2}' | xargs kill -9
@@ -68,8 +69,11 @@ MaxCircuitBuildAttempts 5
 EOF
 
   grep DirAuthority ${CHUTNEY_PATH}/net/nodes/000a/torrc >> ./${TING_CONFIG_FILE}
+  ${SCRIPTS}/echo_server &
 
-  ./ting_runner.py --log-level WARNING ${fingerprint_relay_x} ${fingerprint_relay_y}
+  ${SCRIPTS}/ting_runner.py --log-level WARNING ${fingerprint_relay_x} ${fingerprint_relay_y}
+
+  kill_echo_server
 }
 
 stop() {
