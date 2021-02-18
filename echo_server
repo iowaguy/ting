@@ -1,0 +1,8 @@
+#!/usr/bin/python3
+
+from ting.echo_server import EchoServer
+
+if __name__ == "__main__":
+    echo_server = EchoServer()
+    if not echo_server.is_running():
+        echo_server.run()

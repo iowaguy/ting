@@ -2,27 +2,25 @@
 
 """A module for running an echo server."""
 
-from contextlib import contextmanager
 import logging
 import select
 import socket
-from ting.stoppable_thread import StoppableThread
 
-
-class EchoServer(StoppableThread):
+class EchoServer():
     """A simple echo server for Ting to contact."""
 
     __MESSAGE_SIZE = 3
     __TIMEOUT = 0.5
 
     def __init__(self, host="0.0.0.0", port=16667):
-        StoppableThread.__init__(self)
         self.echo_socket = self.__setup_socket(host, port)
+        self.running = False
 
     def run(self):
         """Start the echo server."""
+        self.running = True
         read_list = [self.echo_socket]
-        while not self.stopped():
+        while True:
             readable, _, _ = select.select(read_list, [], [], EchoServer.__TIMEOUT)
             logging.debug("Socket is ready to read")
             for sock in readable:
@@ -41,6 +39,10 @@ class EchoServer(StoppableThread):
                     read_list.remove(sock)
                     logging.info("Connection closed.")
 
+    def is_running(self):
+        """Return True if echo server is running locally."""
+        return self.running
+                    
     @classmethod
     def __setup_socket(cls, host, port):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -51,19 +53,3 @@ class EchoServer(StoppableThread):
         sock.listen(backlog)
         logging.info("TCP echo server listening on port %i", port)
         return sock
-
-    @classmethod
-    def is_running(cls):
-        """Return True if echo server is running locally."""
-        raise NotImplementedError("TODO EchoServer.is_running needs to be implemented")
-
-@contextmanager
-def echo_server():
-    """A context managed echo server."""
-    echo_server_thread = EchoServer()
-    echo_server_thread.start()
-    try:
-        yield
-    finally:
-        echo_server_thread.stop()
-        echo_server_thread.join()

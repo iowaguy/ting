@@ -48,8 +48,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--input-file",
-        help="read list of relay pairs to measure from file, which contains\
-                                              one space-separated pair of fingerprints or ips per line (default none)",
+        help="""read list of relay pairs to measure from file, which contains
+                one space-separated pair of fingerprints or ips per line 
+                (default none)""",
     )
     parser.add_argument(
         "--log-level",
