@@ -285,7 +285,7 @@ class TingClient:
             while num_seen < self.num_samples:
                 start_time = time.time()
                 self.tor_sock.send(msg)
-                data = self.tor_sock.recv(1)
+                self.tor_sock.recv(1024)
                 end_time = time.time()
                 arr.append((end_time - start_time))
                 num_seen += 1
