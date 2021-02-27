@@ -64,7 +64,7 @@ Vagrant.configure("2") do |config|
     # Enable provisioning with a shell script. Additional provisioners such as
     # Ansible, Chef, Docker, Puppet and Salt are also available. Please see the
     # documentation for more information about their specific syntax and use.
-    ting.vm.provision "shell", path: "install-dependencies.sh"
-    ting.vm.provision "shell", path: "install-tor.sh", privileged: true
+    ting.vm.provision "shell", path: "scripts/install-dependencies.sh"
+    ting.vm.provision "shell", path: "scripts/install-tor.sh", privileged: true
   end
 end

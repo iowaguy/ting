@@ -267,15 +267,23 @@ class TingClient:
             self.recently_updated = False
 
     def build_circuit(self, circuit: List[str]):
-        """Build a Tor circuit. \n*circuit* is a list of fingerprints from which a Tor circuit will be built."""
+        """Build a Tor circuit. *circuit* is a list of fingerprints from which a Tor circuit will be built."""
         cid, last_exception, failures = None, None, 0
 
         while failures < self.max_circuit_builds:
             try:
                 ting.logging.log("Building circuit...")
+                start_build = time.time()
                 cid = self.controller.new_circuit(circuit, await_build=True)
+                end_build = time.time()
+                self.curr_cid = cid
                 ting.logging.success("Circuit built successfully.")
-                return cid
+
+                log("Setting up SOCKS proxy...")
+                self.tor_sock = self.__setup_proxy()
+                log("SOCKS proxy setup complete.")
+                
+                return cid, round(end_build - start_build, 5)
 
             except (InvalidRequest, CircuitExtensionFailed) as exc:
                 failures += 1

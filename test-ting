@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-CHUTNEY_PATH=${HOME}/chutney
+CHUTNEY_PATH=${PWD}/chutney
 CHUTNEY_BIN=${CHUTNEY_PATH}/chutney
 CHUTNEY_REPO=https://git.torproject.org/chutney.git
 NETWORK_SPECS=${CHUTNEY_PATH}/networks/basic
@@ -21,7 +21,7 @@ kill_echo_server() {
 }
 
 configure_chutney() {
-  pushd $HOME
+  pushd $PWD
   if [ ! -d "chutney" ]; then
     git clone ${CHUTNEY_REPO}
   else
