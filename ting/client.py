@@ -37,7 +37,7 @@ class TingClient:
     #     """Generates a list of unbuilt TorCircuit objects."""
     #     raise NotImplentedError("not yet..")
 
-    def __init__(self, config, result_queue):
+    def __init__(self, config):
         self.config = config
         self.controller_port = config["ControllerPort"]
         self.socks_port = config["SocksPort"]
@@ -50,7 +50,6 @@ class TingClient:
         self.max_circuit_builds = config["MaxCircuitBuildAttempts"]
         self.w_addr, self.w_fp = config["W"].split(",")
         self.z_addr, self.z_fp = config["Z"].split(",")
-        self.result_queue = result_queue
         self.__parse_relay_list(config["RelayList"],
                                 int(config["RelayCacheTime"]))
         self.controller = self.__initialize_controller()

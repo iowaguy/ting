@@ -1,7 +1,6 @@
 from datetime import datetime
 import json
 import logging
-import queue
 import signal
 import sys
 from ting.client import TingClient
@@ -57,8 +56,6 @@ def main(args):
 
     ########## CONFIG END ##########
 
-    results_queue = queue.Queue()
-
     def catch_sigint(signal, frame):
         sys.exit(0)
 
@@ -66,5 +63,5 @@ def main(args):
         signal.SIGINT, catch_sigint
     )  # Still write output even if process killed
 
-    client = TingClient(config, results_queue)
+    client = TingClient(config)
     client.run()
