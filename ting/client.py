@@ -25,11 +25,19 @@ from ting.exceptions import CircuitConnectionException
 
 
 class TingClient:
-    """A client for tinging Tor."""
+    """A class for managing Ting operations."""
     __SOCKS_TYPE = socks.SOCKS5
     __SOCKS_HOST = "127.0.0.1"
 
-    def __init__(self, config, result_queue, flush_to_file):
+    # def __init__(self, relay_w_fp, relay_z_fp, local_ip, dest_port):
+    #     raise NotImplentedError("not yet..")
+
+
+    # def generate_circuit_templates(self, relay1, relay2) -> List[TorCircuit]:
+    #     """Generates a list of unbuilt TorCircuit objects."""
+    #     raise NotImplentedError("not yet..")
+
+    def __init__(self, config, result_queue):
         self.config = config
         self.controller_port = config["ControllerPort"]
         self.socks_port = config["SocksPort"]
@@ -43,7 +51,6 @@ class TingClient:
         self.w_addr, self.w_fp = config["W"].split(",")
         self.z_addr, self.z_fp = config["Z"].split(",")
         self.result_queue = result_queue
-        self.flush_to_file = flush_to_file
         self.__parse_relay_list(config["RelayList"],
                                 int(config["RelayCacheTime"]))
         self.controller = self.__initialize_controller()
@@ -397,14 +404,8 @@ class TingClient:
                     for (circ, name) in circs:
                         trial[name] = {}
                         ting.logging.log("Tinging " + name)
-                        start_build = time.time()
-                        cid = self.build_circuit(circ)
-                        self.curr_cid = cid
-                        trial[name]["build_time"] = round(
-                            (time.time() - start_build), 5
-                        )
-
-                        self.tor_sock = self.__setup_proxy()
+                        cid, build_time = self.build_circuit(circ)
+                        trial[name]["build_time"] = build_time
 
                         start_ting = time.time()
                         ting_results = self.ting()
@@ -450,8 +451,6 @@ class TingClient:
                 notify("Error", msg)
                 consecutive_fails = 0
 
-            self.result_queue.put(result, False)
-            self.flush_to_file()
             self.__try_daily_update()
 
         self._shutdown_socket()

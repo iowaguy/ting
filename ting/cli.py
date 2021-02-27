@@ -60,23 +60,11 @@ def main(args):
     results_queue = queue.Queue()
 
     def catch_sigint(signal, frame):
-        flush_to_file()
         sys.exit(0)
-
-    # Flush anything waiting to be written to the output file on its own line
-    # Accumulating all the results will be done post-processing
-    def flush_to_file():
-        while not results_queue.empty():
-            result = results_queue.get(False)
-            with open(get_current_log(), "a") as f:
-                f.write(json.dumps(result))
-                f.write("\n")
 
     signal.signal(
         signal.SIGINT, catch_sigint
     )  # Still write output even if process killed
 
-    client = TingClient(config, results_queue, flush_to_file)
+    client = TingClient(config, results_queue)
     client.run()
-
-    flush_to_file()
