@@ -72,4 +72,8 @@ def main(args):
         config["DestinationPort"],
         **config
     )
+    client.generate_circuit_templates(
+        "873610A50D6AC4A7D2BA0A0D5BEDFDB039C66A15",
+        "C70CDB4796D64EA085B014A5A20B7DE159EF2111",
+    )
     client.run()
