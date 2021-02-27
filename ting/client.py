@@ -26,12 +26,9 @@ from ting.exceptions import CircuitConnectionException
 
 class TingClient:
     """A class for managing Ting operations."""
+
     __SOCKS_TYPE = socks.SOCKS5
     __SOCKS_HOST = "127.0.0.1"
-
-    # def generate_circuit_templates(self, relay1, relay2) -> List[TorCircuit]:
-    #     """Generates a list of unbuilt TorCircuit objects."""
-    #     raise NotImplentedError("not yet..")
 
     def __init__(self, relay_w_fp, relay_z_fp, local_ip, dest_port, **kwargs):
         self.socks_port = kwargs["SocksPort"]
@@ -44,8 +41,7 @@ class TingClient:
         self.max_circuit_builds = kwargs["MaxCircuitBuildAttempts"]
         self.w_fp = relay_w_fp
         self.z_fp = relay_z_fp
-        self.__parse_relay_list(kwargs["RelayList"],
-                                int(kwargs["RelayCacheTime"]))
+        self.__parse_relay_list(kwargs["RelayList"], int(kwargs["RelayCacheTime"]))
         self.controller = self.__initialize_controller(kwargs["ControllerPort"])
         self.__setup_job_queue(kwargs["Pair"], kwargs["InputFile"])
         if "ResultDirectory" in kwargs:
@@ -58,6 +54,10 @@ class TingClient:
         self.start_time = str(datetime.now())
         self.relay_list = {}
         self.fp_to_ip = {}
+
+    # def generate_circuit_templates(self, relay1, relay2) -> List[TorCircuit]:
+    #     """Generates a list of unbuilt TorCircuit objects."""
+    #     raise NotImplentedError("not yet..")
 
     def __initialize_controller(self, controller_port):
         controller = Controller.from_port(port=controller_port)
@@ -128,10 +128,8 @@ class TingClient:
         for relay in data["relays"]:
             if "or_addresses" in relay:
                 ip = relay["or_addresses"][0].split(":")[0]
-                self.relay_list[ip] = relay["fingerprint"].encode("ascii",
-                                                                  "ignore")
-                self.fp_to_ip[relay["fingerprint"].encode("ascii",
-                                                          "ignore")] = ip
+                self.relay_list[ip] = relay["fingerprint"].encode("ascii", "ignore")
+                self.fp_to_ip[relay["fingerprint"].encode("ascii", "ignore")] = ip
 
     @classmethod
     def __seconds_to_hours(cls, seconds: int) -> float:
@@ -152,10 +150,8 @@ class TingClient:
                 )
                 if hours_since_last <= relay_cache_time:
                     ting.logging.log(
-                        "Found list of relays in cache that is {0} hours old. \
-                         Using that...".format(
-                            hours_since_last
-                        )
+                        "Found list of relays in cache that is "
+                        f"{hours_since_last} hours old. Using that..."
                     )
                     with open(most_recent_list) as f:
                         r = f.read()
@@ -188,9 +184,7 @@ class TingClient:
                 self.__load_consensus(data)
 
         ting.logging.success(
-            "There are {0} currently running Tor nodes.".format(
-                len(self.fp_to_ip)
-            )
+            "There are {0} currently running Tor nodes.".format(len(self.fp_to_ip))
         )
 
     def __setup_job_queue(self, pair, input_file):
@@ -207,15 +201,11 @@ class TingClient:
                             self.job_queue.put(config.strip().split(" "))
                 except IOError:
                     failure(
-                        "Could not find specified input file {0}".format(
-                            input_file
-                        )
+                        "Could not find specified input file {0}".format(input_file)
                     )
                 except Exception:
                     failure("Input file does not follow the specified format")
-                print("Collect mode selected : input_file={0}".format(
-                    input_file
-                ))
+                print("Collect mode selected : input_file={0}".format(input_file))
             else:
                 print("Random mode selected")
 
@@ -274,7 +264,7 @@ class TingClient:
                 log("Setting up SOCKS proxy...")
                 self.tor_sock = self.__setup_proxy()
                 log("SOCKS proxy setup complete.")
-                
+
                 return cid, round(end_build - start_build, 5)
 
             except (InvalidRequest, CircuitExtensionFailed) as exc:
@@ -300,9 +290,7 @@ class TingClient:
 
         try:
             print("\tTrying to connect..")
-            self.tor_sock.connect(
-                (self.destination_addr, self.destination_port)
-            )
+            self.tor_sock.connect((self.destination_addr, self.destination_port))
             print(
                 ting.logging.Color.SUCCESS
                 + "\tConnected successfully!"
@@ -311,7 +299,7 @@ class TingClient:
 
             while num_seen < self.num_samples:
                 start_time = time.time()
-                logging.debug("Tinging. Sample #%s", num_seen+1)
+                logging.debug("Tinging. Sample #%s", num_seen + 1)
                 self.tor_sock.send(msg)
                 self.tor_sock.recv(1024)
                 end_time = time.time()
@@ -394,10 +382,7 @@ class TingClient:
 
                         start_ting = time.time()
                         ting_results = self.ting()
-                        trial[name]["ting_time"] = round(
-                            (time.time() - start_ting),
-                            5
-                        )
+                        trial[name]["ting_time"] = round((time.time() - start_ting), 5)
                         trial[name]["measurements"] = ting_results
                         ting.logging.log(
                             "Ting complete, min for this circuit: %fms"
@@ -429,17 +414,14 @@ class TingClient:
                 time.sleep(5)
 
             if consecutive_fails >= 5:
-                msg = (
-                    f"There have been 5 consecutive failures. The last pair \
+                msg = f"There have been 5 consecutive failures. The last pair \
                       attempted was {pair}"
-                )
                 notify("Error", msg)
                 consecutive_fails = 0
 
             self.__try_daily_update()
 
         self._shutdown_socket()
-
 
     def _shutdown_socket(self):
         try:

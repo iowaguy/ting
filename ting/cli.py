@@ -9,8 +9,10 @@ from ting.logging import failure, log
 
 RESULT_DIRECTORY = "results"
 
+
 def get_current_log():
     return RESULT_DIRECTORY + "/" + str(datetime.now()).split()[0] + ".json"
+
 
 def main(args):
 
@@ -63,6 +65,11 @@ def main(args):
         signal.SIGINT, catch_sigint
     )  # Still write output even if process killed
 
-    client = TingClient(config["W"], config["Z"], config["SourceAddr"],
-                        config["DestinationPort"], **config)
+    client = TingClient(
+        config["W"],
+        config["Z"],
+        config["SourceAddr"],
+        config["DestinationPort"],
+        **config
+    )
     client.run()

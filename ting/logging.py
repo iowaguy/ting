@@ -9,6 +9,7 @@ EMAIL_ADDR = None  # set this to your email address to get email notifications
 
 class Color:
     """Useful color codes."""
+
     HEADER = "\033[95m"
     BLUE = "\033[94m"
     SUCCESS = "\033[92m"
@@ -34,13 +35,14 @@ def failure(msg):
 def log(msg):
     logging.info(msg)
 
+
 def debug(msg):
     logging.debug(msg)
+
 
 def notify(msg_type, msg):
     """Send email alert."""
     if EMAIL_ADDR:
         os.system(
-            "echo '{0}' | mailx -s 'Ting {1}' '{2}'".format(msg, msg_type,
-                                                            EMAIL_ADDR)
+            "echo '{0}' | mailx -s 'Ting {1}' '{2}'".format(msg, msg_type, EMAIL_ADDR)
         )

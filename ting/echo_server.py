@@ -6,7 +6,8 @@ import logging
 import select
 import socket
 
-class EchoServer():
+
+class EchoServer:
     """A simple echo server for Ting to contact."""
 
     __MESSAGE_SIZE = 3
@@ -42,7 +43,7 @@ class EchoServer():
     def is_running(self):
         """Return True if echo server is running locally."""
         return self.running
-                    
+
     @classmethod
     def __setup_socket(cls, host, port):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
