@@ -63,5 +63,6 @@ def main(args):
         signal.SIGINT, catch_sigint
     )  # Still write output even if process killed
 
-    client = TingClient(config)
+    client = TingClient(config["W"], config["Z"], config["SourceAddr"],
+                        config["DestinationPort"], **config)
     client.run()

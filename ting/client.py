@@ -29,38 +29,28 @@ class TingClient:
     __SOCKS_TYPE = socks.SOCKS5
     __SOCKS_HOST = "127.0.0.1"
 
-    # def __init__(self, relay_w_fp, relay_z_fp, local_ip, dest_port):
-    #     raise NotImplentedError("not yet..")
-
-
     # def generate_circuit_templates(self, relay1, relay2) -> List[TorCircuit]:
     #     """Generates a list of unbuilt TorCircuit objects."""
     #     raise NotImplentedError("not yet..")
 
-    def __init__(self, config):
-        self.config = config
-        self.controller_port = config["ControllerPort"]
-        self.socks_port = config["SocksPort"]
-        self.destination_port = config["DestinationPort"]
-        self.num_samples = config["NumSamples"]
-        self.num_repeats = config["NumRepeats"]
-        self.source_addr = config["SourceAddr"]
-        self.destination_addr = config["DestinationAddr"]
-        self.socks_timeout = config["SocksTimeout"]
-        self.max_circuit_builds = config["MaxCircuitBuildAttempts"]
-        self.w_addr, self.w_fp = config["W"].split(",")
-        self.z_addr, self.z_fp = config["Z"].split(",")
-        self.__parse_relay_list(config["RelayList"],
-                                int(config["RelayCacheTime"]))
-        self.controller = self.__initialize_controller()
-        ting.logging.success(
-            f"Controller initialized on port {self.controller_port}. Talking "
-            "to Tor on port {self.socks_port}."
-        )
-        self.__setup_job_queue(config["Pair"], config["InputFile"])
-        if "ResultDirectory" in config:
+    def __init__(self, relay_w_fp, relay_z_fp, local_ip, dest_port, **kwargs):
+        self.socks_port = kwargs["SocksPort"]
+        self.destination_port = dest_port
+        self.num_samples = kwargs["NumSamples"]
+        self.num_repeats = kwargs["NumRepeats"]
+        self.source_addr = local_ip
+        self.destination_addr = kwargs["DestinationAddr"]
+        self.socks_timeout = kwargs["SocksTimeout"]
+        self.max_circuit_builds = kwargs["MaxCircuitBuildAttempts"]
+        self.w_fp = relay_w_fp
+        self.z_fp = relay_z_fp
+        self.__parse_relay_list(kwargs["RelayList"],
+                                int(kwargs["RelayCacheTime"]))
+        self.controller = self.__initialize_controller(kwargs["ControllerPort"])
+        self.__setup_job_queue(kwargs["Pair"], kwargs["InputFile"])
+        if "ResultDirectory" in kwargs:
             global RESULT_DIRECTORY
-            RESULT_DIRECTORY = config["ResultDirectory"]
+            RESULT_DIRECTORY = kwargs["ResultDirectory"]
         self.recently_updated = False
         self.daily_pairs = 0
         self.daily_build_errors = 0
@@ -69,8 +59,8 @@ class TingClient:
         self.relay_list = {}
         self.fp_to_ip = {}
 
-    def __initialize_controller(self):
-        controller = Controller.from_port(port=self.controller_port)
+    def __initialize_controller(self, controller_port):
+        controller = Controller.from_port(port=controller_port)
         if not controller:
             failure("Couldn't connect to Tor, Controller.from_port failed")
         if not controller.is_authenticated():
@@ -106,6 +96,10 @@ class TingClient:
                 attach_stream(event)
 
         controller.add_event_listener(probe_stream, EventType.STREAM)
+        ting.logging.success(
+            f"Controller initialized on port {controller_port}. Talking "
+            "to Tor on port {self.socks_port}."
+        )
         return controller
 
     # Tell socks to use tor as a proxy
@@ -226,14 +220,6 @@ class TingClient:
                 print("Random mode selected")
 
     def __get_next_pair(self):
-        if self.config["InputFile"] == "random":
-            x = choice(self.relay_list.keys())
-            y = choice(self.relay_list.keys())
-
-            while x == y:
-                y = choice(self.relay_list.keys())
-            return (x, y)
-
         try:
             return self.job_queue.get(True, 5)
         except queue.Empty:

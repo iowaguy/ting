@@ -62,8 +62,8 @@ NumSamples 10
 NumRepeats 1
 RelayList test
 RelayCacheTime 24
-W ${host},${fingerprint_relay_w}
-Z ${host},${fingerprint_relay_z}
+W ${fingerprint_relay_w}
+Z ${fingerprint_relay_z}
 # C ${host},${fingerprint_client}
 SocksTimeout 60
 MaxCircuitBuildAttempts 5
