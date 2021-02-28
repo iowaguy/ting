@@ -7,7 +7,7 @@ import os.path
 import queue
 import socket
 import time
-from typing import List
+from typing import List, ClassVar
 import urllib
 
 import socks
@@ -22,15 +22,23 @@ import ting.ting
 from ting.circuit import TorCircuit, TingCircuit
 from ting.exceptions import CircuitConnectionException
 from ting.logging import failure, notify, log
-from ting.utils import Fingerprint
+from ting.utils import Fingerprint, TingLeg, IPAddress, Port
+
 
 class TingClient:
     """A class for managing Ting operations."""
 
     __SOCKS_TYPE = socks.SOCKS5
-    __SOCKS_HOST = "127.0.0.1"
+    __SOCKS_HOST: ClassVar[str] = "127.0.0.1"
 
-    def __init__(self, relay_w_fp, relay_z_fp, local_ip, dest_port, **kwargs):
+    def __init__(
+        self,
+        relay_w_fp: Fingerprint,
+        relay_z_fp: Fingerprint,
+        local_ip: IPAddress,
+        dest_port: Port,
+        **kwargs,
+    ):
         self.socks_port = kwargs["SocksPort"]
         self.destination_port = dest_port
         self.num_samples = kwargs["NumSamples"]
@@ -55,7 +63,9 @@ class TingClient:
         self.relay_list = {}
         self.fp_to_ip = {}
 
-    def generate_circuit_templates(self, relay1: Fingerprint, relay2: Fingerprint) -> TingCircuit:
+    def generate_circuit_templates(
+        self, relay1: Fingerprint, relay2: Fingerprint
+    ) -> TingCircuit:
         """Generates a TingCircuit which includes each of the three TorCircuits to measure.
         :param relay1 The fingerprint of the first relay to measure.
         :param relay2 The fingerprint of the second relay to measure.
@@ -63,12 +73,19 @@ class TingClient:
         :return The TingCircuit object containing three unbuilt circuits.
         """
 
-        xy_circ = [self.w_fp, relay1, relay2, self.z_fp]
         x_circ = [self.w_fp, relay1, self.z_fp]
         y_circ = [self.w_fp, relay2, self.z_fp]
-        return ((xy_circ, "xy"), (x_circ, "x"), (y_circ, "y"))
+        xy_circ = [self.w_fp, relay1, relay2, self.z_fp]
 
-    def generate_circuit_templates_old(self, relay1: Fingerprint, relay2: Fingerprint) -> TingCircuit:
+        return TingCircuit(
+            TorCircuit(self.controller, x_circ, TingLeg.X),
+            TorCircuit(self.controller, y_circ, TingLeg.Y),
+            TorCircuit(self.controller, xy_circ, TingLeg.XY),
+        )
+
+    def generate_circuit_templates_old(
+        self, relay1: Fingerprint, relay2: Fingerprint
+    ) -> TingCircuit:
         """Generates a TingCircuit which includes each of the three TorCircuits to measure.
         :param relay1 The fingerprint of the first relay to measure.
         :param relay2 The fingerprint of the second relay to measure.
@@ -385,11 +402,14 @@ class TingClient:
 
                     trial = {}
                     trial["start_time"] = str(datetime.now())
-                    circs = self.generate_circuit_templates_old(
+                    circs = self.generate_circuit_templates(
                         result["x"]["fp"], result["y"]["fp"]
                     )
 
-                    for (circ, name) in circs:
+                    
+                    for c in circs.all:
+                        name = c.leg.value
+                        circ = c.relays
                         trial[name] = {}
                         ting.logging.log("Tinging " + name)
                         cid, build_time = self.build_circuit(circ)
@@ -414,7 +434,7 @@ class TingClient:
                             x, y, trial["rtt"]
                         )
                     )
-                    result["trials"].append(trial)
+
                     consecutive_fails = 0
 
             except Exception as err:
