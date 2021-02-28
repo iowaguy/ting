@@ -11,11 +11,7 @@ from typing import List, ClassVar
 import urllib
 
 import socks
-from stem import (
-    OperationFailed,
-    InvalidRequest,
-    CircuitExtensionFailed,
-)
+from stem import OperationFailed, InvalidRequest
 from stem.control import Controller, EventType
 import stem.descriptor.remote
 import ting.ting
@@ -28,9 +24,6 @@ from ting.utils import Fingerprint, TingLeg, IPAddress, Port
 class TingClient:
     """A class for managing Ting operations."""
 
-    __SOCKS_TYPE = socks.SOCKS5
-    __SOCKS_HOST: ClassVar[str] = "127.0.0.1"
-
     def __init__(
         self,
         relay_w_fp: Fingerprint,
@@ -39,7 +32,7 @@ class TingClient:
         dest_port: Port,
         **kwargs,
     ):
-        self.socks_port = kwargs["SocksPort"]
+        self.__kwargs = kwargs
         self.destination_port = dest_port
         self.num_samples = kwargs["NumSamples"]
         self.num_repeats = kwargs["NumRepeats"]
@@ -56,9 +49,6 @@ class TingClient:
             global RESULT_DIRECTORY
             RESULT_DIRECTORY = kwargs["ResultDirectory"]
         self.recently_updated = False
-        self.daily_pairs = 0
-        self.daily_build_errors = 0
-        self.daily_socks_errors = 0
         self.start_time = str(datetime.now())
         self.relay_list = {}
         self.fp_to_ip = {}
@@ -78,9 +68,9 @@ class TingClient:
         xy_circ = [self.w_fp, relay1, relay2, self.z_fp]
 
         return TingCircuit(
-            TorCircuit(self.controller, x_circ, TingLeg.X),
-            TorCircuit(self.controller, y_circ, TingLeg.Y),
-            TorCircuit(self.controller, xy_circ, TingLeg.XY),
+            TorCircuit(self.controller, x_circ, TingLeg.X, **self.__kwargs),
+            TorCircuit(self.controller, y_circ, TingLeg.Y, **self.__kwargs),
+            TorCircuit(self.controller, xy_circ, TingLeg.XY, **self.__kwargs),
         )
 
 
@@ -122,17 +112,10 @@ class TingClient:
 
         controller.add_event_listener(probe_stream, EventType.STREAM)
         ting.logging.success(
-            f"Controller initialized on port {controller_port}. Talking "
-            "to Tor on port {self.socks_port}."
+            f"Controller initialized on port {controller_port}."
         )
         return controller
 
-    # Tell socks to use tor as a proxy
-    def __setup_proxy(self):
-        sock = socks.socksocket()
-        sock.set_proxy(self.__SOCKS_TYPE, self.__SOCKS_HOST, self.socks_port)
-        sock.settimeout(self.socks_timeout)
-        return sock
 
     def __download_dummy_consensus(self):
         try:
@@ -240,64 +223,6 @@ class TingClient:
         except queue.Empty:
             return False
 
-    def __try_daily_update(self):
-        if datetime.now().hour == 0 or datetime.now().hour == 12:
-            if not self.recently_updated:
-                msg = "Yesterday I measured {0} pairs in total. There were {1}\
-                       circuit build errors, and {2} circuit connection \
-                       errors. The other {3} were successful! I have been \
-                       running since {4}.".format(
-                    self.daily_pairs,
-                    self.daily_build_errors,
-                    self.daily_socks_errors,
-                    (
-                        self.daily_pairs
-                        - self.daily_build_errors
-                        - self.daily_socks_errors
-                    ),
-                    self.start_time,
-                )
-                notify("Daily Update", msg)
-                self.recently_updated = True
-                self.daily_pairs = 0
-                self.daily_build_errors = 0
-                self.daily_socks_errors = 0
-        else:
-            self.recently_updated = False
-
-    def build_circuit(self, circuit: List[str]):
-        """Build a Tor circuit. *circuit* is a list of fingerprints from which a Tor circuit will be built."""
-        cid, last_exception, failures = None, None, 0
-
-        while failures < self.max_circuit_builds:
-            try:
-                ting.logging.log("Building circuit...")
-                start_build = time.time()
-                cid = self.controller.new_circuit(circuit, await_build=True)
-                end_build = time.time()
-                self.curr_cid = cid
-                ting.logging.success("Circuit built successfully.")
-
-                log("Setting up SOCKS proxy...")
-                self.tor_sock = self.__setup_proxy()
-                log("SOCKS proxy setup complete.")
-
-                return cid, round(end_build - start_build, 5)
-
-            except (InvalidRequest, CircuitExtensionFailed) as exc:
-                failures += 1
-                if "message" in vars(exc):
-                    ting.logging.warning("{0}".format(vars(exc)["message"]))
-                else:
-                    ting.logging.warning(
-                        "Circuit failed to be created, reason unknown."
-                    )
-                if cid is not None:
-                    self.controller.close_circuit(cid)
-                last_exception = exc
-
-        self.daily_build_errors += 1
-        raise last_exception
 
     # Ping over Tor
     # Return array of times measured
@@ -339,7 +264,6 @@ class TingClient:
             if self.tor_sock:
                 self._shutdown_socket()
 
-            self.daily_socks_errors += 1
             raise CircuitConnectionException(
                 "Failed to connect using the given circuit: ", "", str(e)
             )
@@ -351,7 +275,7 @@ class TingClient:
         for pair in iter(lambda: self.__get_next_pair(), ""):
             if pair is False:
                 break
-            self.daily_pairs += 1
+
             x, y = pair
             result = {}
             result["x"], result["y"] = {}, {}
@@ -397,7 +321,7 @@ class TingClient:
                         circ = c.relays
                         trial[name] = {}
                         ting.logging.log("Tinging " + name)
-                        cid, build_time = self.build_circuit(circ)
+                        build_time = c.build()
                         trial[name]["build_time"] = build_time
 
                         start_ting = time.time()
@@ -439,14 +363,6 @@ class TingClient:
                 notify("Error", msg)
                 consecutive_fails = 0
 
-            self.__try_daily_update()
 
         self._shutdown_socket()
 
-    def _shutdown_socket(self):
-        try:
-            logging.debug("Shutting down Tor socket")
-            self.tor_sock.shutdown(socket.SHUT_RDWR)
-        except Exception:
-            log("There was an issue shutting down Tor, but it probably doesn't matter.")
-        self.tor_sock.close()
