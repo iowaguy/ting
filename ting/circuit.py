@@ -3,26 +3,28 @@
 from typing import List
 from stem.control import Controller
 
-from ting.logging import failure, notify, log, success
-from ting.exceptions import CircuitConnectionException
 from ting.utils import Fingerprint, TingLeg
 
 
 class TorCircuit:
     """A class for building and interacting with Tor circuits."""
 
-    def __init__(self, controller: Controller, relays: List[Fingerprint], leg: TingLeg):
-        """:param controller This is a [stem controller][https://stem.torproject.org/api/control.html] object.
+    def __init__(self, controller: Controller, relays: List[Fingerprint],
+                 leg: TingLeg):
+        """:param controller This is a
+        [stem controller][https://stem.torproject.org/api/control.html] object.
         :param relays This is a list of the """
         self.__controller = controller
         self.__relays = relays
         self.__ting_leg = leg
 
     def build(self):
-        raise NotImplentedError("eventually")
+        """Build the circuit."""
+        raise NotImplementedError("eventually")
 
     def sample(self):
-        raise NotImplentedError("eventually")
+        """Take a Ting measurement on this circuit."""
+        raise NotImplementedError("eventually")
 
     @property
     def leg(self):
@@ -33,6 +35,7 @@ class TorCircuit:
     def relays(self):
         """Getter method for the relays in the circuit."""
         return self.__relays
+
 
 class TingCircuit:
     """Holds results for Tor circuit creation."""

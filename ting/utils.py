@@ -11,6 +11,7 @@ IPAddress = str
 Port = int
 """A port number"""
 
+
 class TingLeg(Enum):
     X = "x"
     Y = "y"

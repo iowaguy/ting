@@ -406,7 +406,6 @@ class TingClient:
                         result["x"]["fp"], result["y"]["fp"]
                     )
 
-                    
                     for c in circs.all:
                         name = c.leg.value
                         circ = c.relays
