@@ -16,3 +16,9 @@ class TingException(Exception):
     def __init__(self, msg, exc):
         self.msg = msg
         self.exc = exc
+
+
+class ConnectionAlreadyExistsException(Exception):
+    def __init__(self, msg, exc):
+        self.msg = msg
+        self.exc = exc
