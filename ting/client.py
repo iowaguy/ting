@@ -83,20 +83,6 @@ class TingClient:
             TorCircuit(self.controller, xy_circ, TingLeg.XY),
         )
 
-    def generate_circuit_templates_old(
-        self, relay1: Fingerprint, relay2: Fingerprint
-    ) -> TingCircuit:
-        """Generates a TingCircuit which includes each of the three TorCircuits to measure.
-        :param relay1 The fingerprint of the first relay to measure.
-        :param relay2 The fingerprint of the second relay to measure.
-
-        :return The TingCircuit object containing three unbuilt circuits.
-        """
-
-        xy_circ = [self.w_fp, relay1, relay2, self.z_fp]
-        x_circ = [self.w_fp, relay1, self.z_fp]
-        y_circ = [self.w_fp, relay2, self.z_fp]
-        return ((xy_circ, "xy"), (x_circ, "x"), (y_circ, "y"))
 
     def __initialize_controller(self, controller_port):
         controller = Controller.from_port(port=controller_port)
