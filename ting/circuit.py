@@ -105,13 +105,13 @@ class TorCircuit:
         def attach_stream(event):
             try:
                 self.__controller.attach_stream(event.id, circuit_id)
-            except (OperationFailed, InvalidRequest) as e:
+            except (OperationFailed, InvalidRequest) as exc:
                 warning(
                     f"Failed to attach stream to {circuit_id}, unknown circuit."
                     "Closing stream..."
                 )
-                print("\tResponse Code: %s " % str(e.code))
-                print("\tMessage: %s" % str(e.message))
+                print("\tResponse Code: %s " % str(exc.code))
+                print("\tMessage: %s" % str(exc.message))
                 self.__controller.close_stream(event.id)
 
         # An event listener, called whenever StreamEvent status changes
