@@ -5,7 +5,6 @@ import socket
 import time
 from typing import List, ClassVar
 
-import socks
 from stem import (
     OperationFailed,
     InvalidRequest,
@@ -13,11 +12,13 @@ from stem import (
 )
 from stem.control import Controller, EventType
 
+import socks
 from ting.exceptions import (
     CircuitConnectionException,
     ConnectionAlreadyExistsException,
+    TorShutdownException,
 )
-from ting.logging import log, success, warning, Color, failure
+from ting.logging import log, success, warning, Color
 from ting.utils import Fingerprint, TingLeg, Port, IPAddress
 
 
@@ -61,7 +62,6 @@ class TorCircuit:
         self.__controller = controller
         self.__probe = None
 
-        
     def build(self):
         """Build the circuit.
 
@@ -72,9 +72,7 @@ class TorCircuit:
             try:
                 log("Building circuit...")
                 start_build = time.time()
-                cid = self.__controller.new_circuit(
-                    self.relays, await_build=True
-                )
+                cid = self.__controller.new_circuit(self.relays, await_build=True)
                 self.__circuit_id = cid
                 end_build = time.time()
                 success("Circuit built successfully.")
@@ -101,7 +99,6 @@ class TorCircuit:
                 last_exception = exc
 
         raise last_exception
-
 
     def __configure_listeners(self, circuit_id):
         # Attaches a specific circuit to the given stream (event)
@@ -131,11 +128,10 @@ class TorCircuit:
         self.__probe = probe_stream
         self.__controller.add_event_listener(probe_stream, EventType.STREAM)
 
-
     def __connect_to_dest(self, dest_ip: IPAddress, dest_port: Port):
         try:
             print("\tTrying to connect to endpoint..")
-            
+
             self.__tor_sock.connect((dest_ip, dest_port))
             print(Color.SUCCESS + "\tConnected to endpoint successfully!" + Color.END)
         except socket.error as e:
@@ -169,7 +165,7 @@ class TorCircuit:
         try:
             while num_seen < num_samples:
                 start_time = time.time()
-                logging.debug("Tinging. Sample %s" % str(num_seen + 1))
+                logging.debug("Tinging. Sample %d", num_seen + 1)
                 self.__tor_sock.send(msg)
                 self.__tor_sock.recv(1024)
                 end_time = time.time()
@@ -177,27 +173,26 @@ class TorCircuit:
                 num_seen += 1
                 # time.sleep(1)
 
-            logging.debug("Ending ting after %s sample(s)" % str(num_seen))
+            logging.debug("Ending ting after %d sample(s)", num_seen)
             self.__tor_sock.send(done)
 
             return [round((x * 1000), 5) for x in arr]
 
-        except socket.error as e:
+        except socket.error as exc:
             warning(
                 "Failed to connect using the given circuit: "
-                + str(e)
+                + str(exc)
                 + "\nClosing connection."
             )
             if self.__tor_sock:
                 self.close()
 
             raise CircuitConnectionException(
-                "Failed to connect using the given circuit: ", "", str(e)
+                "Failed to connect using the given circuit: ", "", str(exc)
             )
 
     def close(self):
         """Close the Tor socket."""
-        # TODO bring down circuit
         try:
             logging.debug("Tearing down Tor circuit.")
             self.__controller.close_circuit(self.__circuit_id)
@@ -206,10 +201,9 @@ class TorCircuit:
 
             logging.debug("Shutting down Tor socket")
             self.__tor_sock.shutdown(socket.SHUT_RDWR)
-        except Exception:
+        except TorShutdownException:
             log("There was an issue shutting down Tor, but it probably doesn't matter.")
         self.__tor_sock.close()
-
 
     @property
     def leg(self):
@@ -222,7 +216,7 @@ class TorCircuit:
         return self.__relays
 
     @property
-    def id(self):
+    def circuit_id(self):
         """Get the circuit ID. If circuit has not been built, returns None."""
         return self.__circuit_id
 

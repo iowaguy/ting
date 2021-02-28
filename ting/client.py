@@ -53,7 +53,6 @@ class TingClient:
         controller_port = kwargs.get("ControllerPort", self.__DEFAULT_CONTROLLER_PORT)
         self.__controller = self.__init_controller(controller_port)
 
-
     @classmethod
     def __init_controller(cls, controller_port):
         controller = Controller.from_port(port=controller_port)
@@ -65,7 +64,6 @@ class TingClient:
         controller.set_conf("__LeaveStreamsUnattached", "1")
         success(f"Controller initialized on port {controller_port}.")
         return controller
-
 
     def generate_circuit_templates(
         self, relay1: Fingerprint, relay2: Fingerprint
