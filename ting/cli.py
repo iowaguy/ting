@@ -11,13 +11,7 @@ from ting.logging import failure, log
 RESULT_DIRECTORY = "results"
 
 
-def get_current_log():
-    return RESULT_DIRECTORY + "/" + str(datetime.now()).split()[0] + ".json"
-
-
-def main(args):
-
-    logging.getLogger().setLevel(getattr(logging, args.log_level.upper()))
+def ting_from_configuration(args):
     try:
         f = open(args.config_file)
     except IOError:
@@ -71,7 +65,7 @@ def main(args):
         config["W"],
         config["Z"],
         config["SourceAddr"],
-        num_samples=2,
+        num_samples=10,
         local_test=True,
     )
     print(results)

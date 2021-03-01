@@ -68,6 +68,5 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    logger = logging.getLogger()
-    logger.setLevel(level=getattr(logging, args.log_level.upper()))
-    ting.cli.main(args)
+    logging.getLogger().setLevel(level=getattr(logging, args.log_level.upper()))
+    ting.cli.ting_from_configuration(args)
