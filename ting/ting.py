@@ -1,33 +1,35 @@
+"""Provides a high-level interface to Ting that does not require knowledge
+of internals."""
+
 import logging
-from ting.exceptions import TingException
+from typing import Tuple, List, Dict
+
 from ting.client import TingClient
+from ting.utils import Fingerprint
 
 
 def ting(
-    measurement_targets,
+    measurement_targets: List[Tuple[Fingerprint, Fingerprint]],
+    relay_w_fp,
+    relay_z_fp,
     source_addr=None,
-    max_circuit_build_attempts=5,
     num_samples=10,
-    relay_w_fp=None,
-    relay_z_fp=None,
-    relay_list="test",
-    start_echo_server=False,
-):
+    local_test=False,
+    **kwargs
+) -> Dict[Tuple[Fingerprint, Fingerprint], float]:
+    """A high-level interface for Ting."""
+    ting_client = TingClient(relay_w_fp, relay_z_fp, source_addr, local_test, **kwargs)
 
-    # all "local" config goes in TingClient
-    ting_client = TingClient(relay_w_fp, relay_z_fp, source_addr, dest_port, relay_list)
-    results = {}
+    results = dict()
+    logging.info("Measure RTT between the following nodes: %s", measurement_targets)
     for relay1, relay2 in measurement_targets:
-        with ting_client.circuit(
-            relay1, relay2, max_attempts=max_circuit_build_attempts
-        ) as ting_circuit:
-            results[(relay1, relay2)] = []
-            for _ in range(num_samples):
-                try:
-                    measurement = ting_circuit.measure()
-                except TingException as e:
-                    logging.error("Ting has run into a problem:", str(e))
-
-                results[(relay1, relay2)].append(measurement)
+        results[(relay1, relay2)] = []
+        circuit_templates = ting_client.generate_circuit_templates(relay1, relay2)
+        for circuit_template in circuit_templates.all:
+            circuit_results = {circuit_template.leg.value: []}
+            with circuit_template as circuit:
+                for _ in range(num_samples):
+                    circuit_results[circuit_template.leg.value].append(circuit.sample())
+            results[(relay1, relay2)].append(circuit_results)
 
     return results

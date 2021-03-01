@@ -23,8 +23,8 @@ class ConnectionAlreadyExistsException(Exception):
         self.msg = msg
         self.exc = exc
 
+
 class TorShutdownException(Exception):
     def __init__(self, msg, exc):
         self.msg = msg
         self.exc = exc
-    

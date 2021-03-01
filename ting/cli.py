@@ -3,6 +3,7 @@ import json
 import logging
 import signal
 import sys
+from ting import ting
 from ting.client import TingClient
 from ting.logging import failure, log
 
@@ -16,7 +17,7 @@ def get_current_log():
 
 def main(args):
 
-    logging.basicConfig(level=getattr(logging, args.log_level.upper()))
+    logging.getLogger().setLevel(getattr(logging, args.log_level.upper()))
     try:
         f = open(args.config_file)
     except IOError:
@@ -33,7 +34,7 @@ def main(args):
             config[pair[0]] = int(pair[1])
         except ValueError:
             config[pair[0]] = pair[1]
-    if not "InputFile" in config:
+    if "InputFile" not in config:
         config["InputFile"] = None
 
     arg_overrides = [
@@ -45,7 +46,7 @@ def main(args):
     ]
 
     for override in arg_overrides:
-        if not override[0] is None:
+        if override[0] is not None:
             try:
                 config[override[1]] = int(override[0])
             except ValueError:
@@ -65,18 +66,12 @@ def main(args):
         signal.SIGINT, catch_sigint
     )  # Still write output even if process killed
 
-    client = TingClient(
+    results = ting(
+        [(args.relay1, args.relay2)],
         config["W"],
         config["Z"],
         config["SourceAddr"],
-        config["DestinationPort"],
-        **config
+        num_samples=2,
+        local_test=True,
     )
-    circuits = client.generate_circuit_templates(args.relay1, args.relay2)
-
-    for circuit in circuits.all:
-        build_time = circuit.build()
-        results = circuit.sample()
-        circuit.close()
-        print(results)
-    # client.run()
+    print(results)

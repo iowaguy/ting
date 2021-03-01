@@ -53,7 +53,7 @@ class TorCircuit:
         self.__dest_port = dest_port
 
         self.__max_circuit_build_attempts = kwargs.get(
-            "max_circuit_build_attempts", self.__DEFAULT_MAX_BUILD_ATTEMPTS
+            "MaxCircuitBuildAttempts", self.__DEFAULT_MAX_BUILD_ATTEMPTS
         )
         self.__socks_port = kwargs.get("SocksPort", self.__DEFAULT_SOCKS_PORT)
         self.__socks_timeout = kwargs.get(
@@ -61,6 +61,13 @@ class TorCircuit:
         )
         self.__controller = controller
         self.__probe = None
+        self.__build_time = None
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self.close()
+
+    def __enter__(self):
+        return self.build()
 
     def build(self):
         """Build the circuit.
@@ -76,7 +83,7 @@ class TorCircuit:
                 self.__circuit_id = cid
                 end_build = time.time()
                 success("Circuit built successfully.")
-                # import pdb; pdb.set_trace()
+
                 log("Configuring event listener...")
                 self.__configure_listeners(cid)
                 log("Event listener setup is complete.")
@@ -84,9 +91,9 @@ class TorCircuit:
                 self.__tor_sock = self.__setup_proxy()
                 log("SOCKS proxy setup complete.")
 
-                build_time = round(end_build - start_build, 5)
+                self.__build_time = round(end_build - start_build, 5)
                 self.__connect_to_dest(self.__dest_ip, self.__dest_port)
-                return build_time
+                return self
 
             except (InvalidRequest, CircuitExtensionFailed) as exc:
                 failures += 1
@@ -110,8 +117,8 @@ class TorCircuit:
                     f"Failed to attach stream to {circuit_id}, unknown circuit."
                     "Closing stream..."
                 )
-                print("\tResponse Code: %s " % str(exc.code))
-                print("\tMessage: %s" % str(exc.message))
+                log("\tResponse Code: %s " % str(exc.code))
+                log("\tMessage: %s" % str(exc.message))
                 self.__controller.close_stream(event.id)
 
         # An event listener, called whenever StreamEvent status changes
@@ -121,7 +128,7 @@ class TorCircuit:
                     warning(f"Stream Detached from circuit {circuit_id}...")
                 else:
                     warning("Stream Detached from circuit...")
-                print("\t" + str(vars(event)))
+                log("\t" + str(vars(event)))
             if event.status == "NEW" and event.purpose == "USER":
                 attach_stream(event)
 
@@ -130,23 +137,23 @@ class TorCircuit:
 
     def __connect_to_dest(self, dest_ip: IPAddress, dest_port: Port):
         try:
-            print("\tTrying to connect to endpoint..")
+            log("\tTrying to connect to endpoint..")
 
             self.__tor_sock.connect((dest_ip, dest_port))
-            print(Color.SUCCESS + "\tConnected to endpoint successfully!" + Color.END)
-        except socket.error as e:
+            log(Color.SUCCESS + "\tConnected to endpoint successfully!" + Color.END)
+        except socket.error as exc:
             warning(
                 "Failed to connect to the endpoint using the given circuit: "
-                + str(e)
+                + str(exc)
                 + "\nClosing connection."
             )
             if self.__tor_sock:
                 raise ConnectionAlreadyExistsException(
-                    "This socket is already connected", e
+                    "This socket is already connected", exc
                 )
 
             raise CircuitConnectionException(
-                "Failed to connect using the given circuit: ", "", str(e)
+                "Failed to connect using the given circuit: ", "", str(exc)
             )
 
     # Tell socks to use tor as a proxy
@@ -157,16 +164,15 @@ class TorCircuit:
         return sock
 
     def sample(self, num_samples=1):
-        """Take a Ting measurement on this circuit.
+        """Take a Ting measurement on this circuit. Results in seconds.
         :param num_samples The number of measurements to take. Defaults to 1."""
         arr, num_seen = [], 0
-        msg, done = bytes("!c!", "utf-8"), bytes("!cX", "utf-8")
 
         try:
             while num_seen < num_samples:
                 start_time = time.time()
                 logging.debug("Tinging. Sample %d", num_seen + 1)
-                self.__tor_sock.send(msg)
+                self.__tor_sock.send(bytes("!c!", "utf-8"))
                 self.__tor_sock.recv(1024)
                 end_time = time.time()
                 arr.append((end_time - start_time))
@@ -174,9 +180,11 @@ class TorCircuit:
                 # time.sleep(1)
 
             logging.debug("Ending ting after %d sample(s)", num_seen)
-            self.__tor_sock.send(done)
 
-            return [round((x * 1000), 5) for x in arr]
+            if len(arr) == 1:
+                return arr[0]
+
+            return arr
 
         except socket.error as exc:
             warning(
@@ -194,6 +202,9 @@ class TorCircuit:
     def close(self):
         """Close the Tor socket."""
         try:
+            # Tell echo server that this connection is over
+            self.__tor_sock.send(bytes("!cX", "utf-8"))
+
             logging.debug("Tearing down Tor circuit.")
             self.__controller.close_circuit(self.__circuit_id)
             self.__controller.remove_event_listener(self.__probe)
@@ -219,6 +230,12 @@ class TorCircuit:
     def circuit_id(self):
         """Get the circuit ID. If circuit has not been built, returns None."""
         return self.__circuit_id
+
+    @property
+    def circuit_build_time(self):
+        """Returns the time taken to build the circuit. None if circuit has not
+        been built yet."""
+        return self.__build_time
 
 
 class TingCircuit:
