@@ -16,3 +16,4 @@ data/
 /tingrc
 cache/
 /.vagrant/
+/scripts/local-guardrc

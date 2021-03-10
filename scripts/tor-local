@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+
+import argparse
+import fileinput
+import os
+import shutil
+import subprocess
+import urllib.request
+
+import sys
+from os.path import realpath, dirname
+
+SCRIPT_DIR = dirname(realpath(__file__))
+
+# This line is required so I can use the ting module
+sys.path.append(SCRIPT_DIR + '/../')
+from ting.utils import IPAddress
+
+
+CONFIG_TEMPLATE_PATH = '../configs/'
+GUARD_CONFIG_FILE = 'local-guardrc'
+EXIT_CONFIG_FILE = 'local-exitrc'
+
+def get_public_ip() -> IPAddress:
+    """Get the public IP of the local machine."""
+    return urllib.request.urlopen('https://ident.me').read().decode('utf8')
+
+def fill_out_template(filename):
+    """Copy template and replace with correct parameters."""
+    shutil.copyfile(
+        CONFIG_TEMPLATE_PATH + filename + ".template",
+        filename
+    )
+
+    # find/replace
+    with fileinput.FileInput(filename, inplace=True) as file:
+        for line in file:
+            print(
+                line.replace("$PWD", SCRIPT_DIR).replace(
+                    "$MY_PUBLIC_IP", get_public_ip()
+                ),
+                end=''
+            )
+
+def start_node(config_file, data_dir):
+    """Start Tor relay."""
+    os.makedirs(data_dir, exist_ok=True)
+    fill_out_template(config_file)
+
+    # Start tor, must be on path
+    subprocess.run(["tor", "-f", config_file])
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        prog="tor-local",
+        description="Run local tor relays for use with Ting.",
+    )
+    parser.add_argument(
+        "--guard",
+        "-w",
+        help="Start local guard relay.",
+        action='store_true',
+    )
+    parser.add_argument(
+        "--exit",
+        "-z",
+        help="Start local exit relay.",
+        action='store_true',
+    )
+    args = parser.parse_args()
+
+    # Create log directory
+    os.makedirs("logs", exist_ok=True)
+    
+    if args.guard:
+        start_node(GUARD_CONFIG_FILE, "data/w")
+
+    if args.exit:
+        start_node(EXIT_CONFIG_FILE, "data/z")
+
+    if not args.guard and not args.exit:
+        raise ValueError("Must provider --guard and/or --exit flag.")
+
+
+    # TODO wait until tor is started
+    # TODO return fingerprints of w and z

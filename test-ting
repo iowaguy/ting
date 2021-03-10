@@ -65,7 +65,6 @@ RelayList test
 RelayCacheTime 24
 W ${fingerprint_relay_w}
 Z ${fingerprint_relay_z}
-# C ${host},${fingerprint_client}
 SocksTimeout 60
 MaxCircuitBuildAttempts 5
 EOF

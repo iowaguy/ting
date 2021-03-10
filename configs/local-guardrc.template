@@ -1,0 +1,16 @@
+AvoidDiskWrites 1
+ControlPort 9151
+CookieAuthentication 1
+LearnCircuitBuildTimeout 0
+DataDirectory $PWD/data/w
+ORPort 9001
+DirReqStatistics 0
+UseMicroDescriptors 0
+DownloadExtraInfo 1
+Log notice file $PWD/logs/w.log
+SocksPort 9150
+ExitPolicyRejectPrivate 0
+Exitpolicy accept $MY_PUBLIC_IP:16667,reject *:*
+RunAsDaemon 1
+PublishServerDescriptor 1
+ContactInfo weintraub.b [AT] northeastern [DOT] edu
