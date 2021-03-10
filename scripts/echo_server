@@ -6,7 +6,7 @@ from os.path import realpath, dirname
 script_dir = dirname(realpath(__file__))
 
 # This line is required so I can use the ting module
-sys.path.append(script_dir + '/../')
+sys.path.append(script_dir + "/../")
 from ting.echo_server import EchoServer
 
 if __name__ == "__main__":

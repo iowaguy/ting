@@ -19,7 +19,7 @@ class Color:
 
 
 def success(msg):
-    logging.info(msg, flush=True)
+    logging.info(msg)
 
 
 def warning(msg):

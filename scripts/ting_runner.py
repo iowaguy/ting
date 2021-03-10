@@ -8,7 +8,7 @@ from os.path import realpath, dirname
 script_dir = dirname(realpath(__file__))
 
 # This line is required so I can use the ting module
-sys.path.append(script_dir + '/../')
+sys.path.append(script_dir + "/../")
 import ting.cli
 
 
@@ -32,13 +32,9 @@ if __name__ == "__main__":
         default=None,
     )
     parser.add_argument(
-        "--output-file",
-        help="store detailed results of run in JSON (default none)"
+        "--output-file", help="store detailed results of run in JSON (default none)"
     )
-    parser.add_argument(
-        "--dest-port",
-        help="port of local echo server (default 16667)"
-    )
+    parser.add_argument("--dest-port", help="port of local echo server (default 16667)")
     parser.add_argument(
         "--num-samples",
         help="number of samples for each circuit (default 200)",

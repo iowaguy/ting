@@ -1,0 +1,17 @@
+AvoidDiskWrites 1
+ControlPort 9251
+CookieAuthentication 1
+LearnCircuitBuildTimeout 0
+DataDirectory /home/ben/workspace/ting/scripts/data/z
+ORPort 9002
+DirReqStatistics 0
+UseMicroDescriptors 0
+DownloadExtraInfo 1
+Log notice file /home/ben/workspace/ting/scripts/logs/z.log
+SocksListenAddress 127.0.0.1
+SocksPort 9250
+WarnUnsafeSocks 0
+ExitPolicyRejectPrivate 0
+Exitpolicy accept 96.237.114.103:16667, reject *:*
+RunAsDaemon 1
+PublishServerDescriptor 1

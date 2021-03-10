@@ -13,24 +13,28 @@ from os.path import realpath, dirname
 SCRIPT_DIR = dirname(realpath(__file__))
 
 # This line is required so I can use the ting module
-sys.path.append(SCRIPT_DIR + '/../')
-from ting.utils import IPAddress
+sys.path.append(SCRIPT_DIR + "/../")
+from ting.utils import IPAddress, TorRelayType
 
 
-CONFIG_TEMPLATE_PATH = '../configs/'
-GUARD_CONFIG_FILE = 'local-guardrc'
-EXIT_CONFIG_FILE = 'local-exitrc'
+CONFIG_TEMPLATE_PATH = "../configs/"
+GUARD_CONFIG_FILE = "local-guardrc"
+EXIT_CONFIG_FILE = "local-exitrc"
+
+CONFIG = {
+    TorRelayType.GUARD: {"file": GUARD_CONFIG_FILE, "data_dir": "data/w",},
+    TorRelayType.EXIT: {"file": EXIT_CONFIG_FILE, "data_dir": "data/z",},
+}
+
 
 def get_public_ip() -> IPAddress:
     """Get the public IP of the local machine."""
-    return urllib.request.urlopen('https://ident.me').read().decode('utf8')
+    return urllib.request.urlopen("https://ident.me").read().decode("utf8")
+
 
 def fill_out_template(filename):
     """Copy template and replace with correct parameters."""
-    shutil.copyfile(
-        CONFIG_TEMPLATE_PATH + filename + ".template",
-        filename
-    )
+    shutil.copyfile(CONFIG_TEMPLATE_PATH + filename + ".template", filename)
 
     # find/replace
     with fileinput.FileInput(filename, inplace=True) as file:
@@ -39,49 +43,41 @@ def fill_out_template(filename):
                 line.replace("$PWD", SCRIPT_DIR).replace(
                     "$MY_PUBLIC_IP", get_public_ip()
                 ),
-                end=''
+                end="",
             )
 
-def start_node(config_file, data_dir):
+
+def start_node(relay_type: TorRelayType):
     """Start Tor relay."""
-    os.makedirs(data_dir, exist_ok=True)
-    fill_out_template(config_file)
+    # Create log directory
+    os.makedirs("logs", exist_ok=True)
+
+    os.makedirs(CONFIG[relay_type]["data_dir"], exist_ok=True)
+    fill_out_template(CONFIG[relay_type]["file"])
 
     # Start tor, must be on path
-    subprocess.run(["tor", "-f", config_file])
+    subprocess.run(["tor", "-f", CONFIG[relay_type]["file"]], check=True)
+    with open(CONFIG[relay_type]["data_dir"] + "/fingerprint") as f:
+        return f.read()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog="tor-local",
-        description="Run local tor relays for use with Ting.",
+        prog="tor-local", description="Run local tor relays for use with Ting.",
     )
     parser.add_argument(
-        "--guard",
-        "-w",
-        help="Start local guard relay.",
-        action='store_true',
+        "--guard", "-w", help="Start local guard relay.", action="store_true",
     )
     parser.add_argument(
-        "--exit",
-        "-z",
-        help="Start local exit relay.",
-        action='store_true',
+        "--exit", "-z", help="Start local exit relay.", action="store_true",
     )
     args = parser.parse_args()
 
-    # Create log directory
-    os.makedirs("logs", exist_ok=True)
-    
     if args.guard:
-        start_node(GUARD_CONFIG_FILE, "data/w")
+        guard_fp = start_node(TorRelayType.GUARD)
 
     if args.exit:
-        start_node(EXIT_CONFIG_FILE, "data/z")
+        exit_fp = start_node(TorRelayType.EXIT)
 
     if not args.guard and not args.exit:
         raise ValueError("Must provider --guard and/or --exit flag.")
-
-
-    # TODO wait until tor is started
-    # TODO return fingerprints of w and z

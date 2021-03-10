@@ -19,3 +19,9 @@ class TingLeg(Enum):
     X = "x"
     Y = "y"
     XY = "xy"
+
+
+class TorRelayType(Enum):
+    GUARD = 0
+    MIDDLE = 1
+    EXIT = 2
