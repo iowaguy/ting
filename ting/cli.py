@@ -60,12 +60,13 @@ def ting_from_configuration(args):
         signal.SIGINT, catch_sigint
     )  # Still write output even if process killed
 
+    local_test = config["RelayList"] == "test"
     results = ting(
         [(args.relay1, args.relay2)],
         config["W"],
         config["Z"],
         config["SourceAddr"],
         num_samples=10,
-        local_test=True,
+        local_test=local_test,
     )
     print(results)

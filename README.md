@@ -1,12 +1,41 @@
-# TING Refresh
+# Ting Refresh
+## Running Ting
+1. Run the echo server that Ting will contact through Tor. Note that this is a
+   blocking call by default, but can be run in the background through the usual means.
+   ``` shell
+   scripts/echo_server
+   ```
 
-## Testing Ting
+2. Run the local Tor relays that serve as the guard and exit nodes for all Ting
+   measurements.
+   ``` shell
+   cd scripts/
+   ./tor-local --guard --exit
+   ```
+
+3. Run Ting. This can either be done through the API, or the standalone script.
+   In either case, you'll have run the following to setup `tingrc`.
+   ``` shell
+   ./ting.sh configure
+   ```
+
+   If executing the standalone script, simply run
+   ``` shell
+   ./ting.sh start <fingerprint1> <fingerprint2>
+   ```
+
+   Testing the latency between the two nodes at MIT, it would look like
+   ``` shell
+   ./ting.sh start 9695DFC35FFEB861329B9F1AB04C46397020CE31 749EF4A434DFD00DAB31E93DE86233FB916D31E3
+   ```
+
+## Locally Testing Ting
 
 ``` shell
-./test-ting configure
-./test-ting start
-./test-ting ting
-./test-ting stop
+./ting.sh configure_test
+./ting.sh bootstrap_test
+./ting.sh start_test
+./ting.sh stop_test
 ```
 
 The `RelayList` parameter can be either `internet` or `test`. If `internet` is

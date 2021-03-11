@@ -9,9 +9,12 @@ CHUTNEY_NODES=${CHUTNEY_PATH}/net/nodes
 TING_CONFIG_FILE=tingrc
 SCRIPTS=./scripts
 TING_LOG_LEVEL=WARNING
+TOR_DATA=${SCRIPTS}/data
+TOR_DATA_W=${TOR_DATA}/w
+TOR_DATA_Z=${TOR_DATA}/z
 
 kill_all() {
-  ps -ef | grep $1 | grep -v grep | awk '{print $2}' | xargs kill -9
+  ps -ef | grep "$1 " | grep -v grep | awk '{print $2}' | xargs kill -9
 }
 
 kill_tor() {
@@ -32,7 +35,7 @@ configure_chutney() {
   popd
 }
 
-start() {
+bootstrap_test() {
   # Configure torrc files
   ${CHUTNEY_BIN} configure ${NETWORK_SPECS}
 
@@ -43,7 +46,7 @@ start() {
   ${CHUTNEY_BIN} wait_for_bootstrap ${NETWORK_SPECS}
 }
 
-ting() {
+start_test() {
   local fingerprint_relay_w=$(cat ${CHUTNEY_NODES}/003r/fingerprint | awk '{print $2}')
   local fingerprint_relay_x=$(cat ${CHUTNEY_NODES}/004r/fingerprint | awk '{print $2}')
   local fingerprint_relay_y=$(cat ${CHUTNEY_NODES}/005r/fingerprint | awk '{print $2}')
@@ -77,19 +80,55 @@ EOF
   kill_echo_server
 }
 
-stop() {
+stop_test() {
   # Stop tor nodes
   ${CHUTNEY_BIN} stop ${NETWORK_SPECS}
   kill_tor
 }
 
-status() {
+status_test() {
   ${CHUTNEY_BIN} status ${NETWORK_SPECS}
 }
 
 usage() {
-  echo "Usage: $0 [configure|start|ting|stop|status]" 1>&2
+  echo "Usage: $0 [configure[_test]|bootstrap_test|start[_test]|stop[_test]|status_test]" 1>&2
   exit 1
+}
+
+configure() {
+  local fingerprint_relay_w=$(cat ${TOR_DATA_W}/fingerprint | awk '{print $2}')
+  local fingerprint_relay_z=$(cat ${TOR_DATA_Z}/fingerprint | awk '{print $2}')
+
+  local host=$(curl icanhazip.com 2>/dev/null)
+
+  # Generate default tingrc file
+  cat <<EOF > ./${TING_CONFIG_FILE}
+SocksPort 9008
+ControllerPort 8008
+SourceAddr $host
+DestinationAddr $host
+DestinationPort 16667
+NumSamples 10
+NumRepeats 1
+RelayList internet
+RelayCacheTime 24
+W ${fingerprint_relay_w}
+Z ${fingerprint_relay_z}
+SocksTimeout 60
+MaxCircuitBuildAttempts 5
+EOF
+}
+
+start() {
+  local fingerprint_relay_x=$1
+  local fingerprint_relay_y=$2
+
+  ${SCRIPTS}/ting_runner.py --log-level ${TING_LOG_LEVEL} ${fingerprint_relay_x} ${fingerprint_relay_y}
+}
+
+stop() {
+  kill_echo_server
+  kill_tor
 }
 
 if [ $# == 0 ]; then
@@ -99,17 +138,31 @@ fi
 while :; do
   PARAM=`echo $1 | awk -F= '{print $1}'`
   case "$PARAM" in
-    configure)
+    configure_test)
       configure_chutney
       ;;
+    bootstrap_test)
+      bootstrap_test
+      ;;
+    status_test)
+      status_test
+      ;;
+    start_test)
+      start_test
+      ;;
+    stop_test)
+      stop_test
+      ;;
+    configure)
+      configure
+      ;;
     start)
+      if [ $# != 3 ]; then
+        usage
+        exit 1
+      fi
+
       start
-      ;;
-    status)
-      status
-      ;;
-    ting)
-      ting
       ;;
     stop)
       stop
