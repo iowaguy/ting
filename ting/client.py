@@ -5,7 +5,7 @@ import os
 import os.path
 import queue
 import time
-from typing import ClassVar
+from typing import Any, cast, ClassVar, Dict, List, Union
 import urllib
 
 from stem.control import Controller
@@ -32,17 +32,17 @@ class TingClient:
         relay_z_fp: Fingerprint,
         local_ip: IPAddress,
         local_test: bool = False,
-        **kwargs,
-    ):
+        **kwargs: Union[int, str],
+    ) -> None:
         self.__kwargs = kwargs
-        self.destination_port = kwargs.get(
+        self.destination_port = int(kwargs.get(
             "DestinationPort", self.__DEFAULT_ECHO_SERVER_PORT
-        )
-
+        ))
+        
         self.source_addr = local_ip
-        self.destination_addr = kwargs.get(
+        self.destination_addr = str(kwargs.get(
             "DestinationAddr", self.__DEFAULT_ECHO_SERVER_IP
-        )
+        ))
 
         self.w_fp = relay_w_fp
         self.z_fp = relay_z_fp
@@ -52,9 +52,9 @@ class TingClient:
 
         self.__parse_relay_list(local_test, relay_cache_time)
 
-        self.relay_list = {}
-        self.fp_to_ip = {}
-        controller_port = kwargs.get("ControllerPort", self.__DEFAULT_CONTROLLER_PORT)
+        self.relay_list: Dict[IPAddress, Fingerprint]
+        self.fp_to_ip: Dict[Fingerprint, IPAddress]
+        controller_port = int(kwargs.get("ControllerPort", self.__DEFAULT_CONTROLLER_PORT))
 
         try:
             self.__controller = self.__init_controller(controller_port)
@@ -66,7 +66,7 @@ class TingClient:
             # raise err
 
     @classmethod
-    def __init_controller(cls, controller_port):
+    def __init_controller(cls, controller_port: Port) -> Controller:
 
         controller = Controller.from_port(port=controller_port)
         if not controller:
@@ -119,7 +119,7 @@ class TingClient:
             ),
         )
 
-    def __download_dummy_consensus(self):
+    def __download_dummy_consensus(self) -> None:
         try:
             self.relay_list = {}
             self.fp_to_ip = {}
@@ -132,7 +132,7 @@ class TingClient:
         except Exception as exc:
             print("Unable to retrieve the consensus: %s" % exc)
 
-    def __load_consensus(self, data):
+    def __load_consensus(self, data: Dict[str, Any]) -> None:
         self.relay_list = {}
         self.fp_to_ip = {}
         for relay in data["relays"]:
@@ -145,7 +145,7 @@ class TingClient:
     def __seconds_to_hours(cls, seconds: int) -> float:
         return seconds / 3600
 
-    def __parse_relay_list(self, test_relays=False, relay_cache_time=24):
+    def __parse_relay_list(self, test_relays: bool = False, relay_cache_time: int = 24) -> None:
         data = None
         if not test_relays:
             if os.path.exists("./cache") and len(os.listdir("./cache")) > 0:

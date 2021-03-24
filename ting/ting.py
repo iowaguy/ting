@@ -2,20 +2,20 @@
 of internals."""
 
 import logging
-from typing import Tuple, List, Dict
+from typing import Tuple, List, Dict, Union
 
 from ting.client import TingClient
-from ting.utils import Fingerprint, RelayPair
+from ting.utils import Fingerprint, IPAddress, RelayPair
 
 
 def ting(
     measurement_targets: List[Tuple[Fingerprint, Fingerprint]],
-    relay_w_fp,
-    relay_z_fp,
-    source_addr=None,
-    num_samples=10,
-    local_test=False,
-    **kwargs,
+    relay_w_fp: Fingerprint,
+    relay_z_fp: Fingerprint,
+    source_addr: IPAddress = "127.0.0.1",
+    num_samples: int = 10,
+    local_test: bool = False,
+    **kwargs: Union[str, int],
 ) -> Dict[RelayPair, Dict[str, List[float]]]:
     """A high-level interface for Ting."""
     ting_client = TingClient(relay_w_fp, relay_z_fp, source_addr, local_test, **kwargs)

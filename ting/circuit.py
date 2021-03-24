@@ -3,7 +3,7 @@
 import logging
 import socket
 import time
-from typing import Any, Callable, ClassVar, List, Tuple, TypeVar
+from typing import Any, Callable, ClassVar, List, Tuple, TypeVar, Union
 
 from stem import (
     OperationFailed,
@@ -21,7 +21,7 @@ from ting.exceptions import (
 from ting.logging import log, success, warning, Color
 from ting.utils import Fingerprint, TingLeg, Port, IPAddress
 
-T = TypeVar('T', bound='TorCircuit')
+TC = TypeVar('TC', bound='TorCircuit')
 
 class TorCircuit:
     """A class for building and interacting with Tor circuits."""
@@ -39,7 +39,7 @@ class TorCircuit:
         leg: TingLeg,
         dest_ip: IPAddress,
         dest_port: Port,
-        **kwargs: int,
+        **kwargs: Union[int, str]
     ) -> None:
         """
         :param controller This is a
@@ -49,33 +49,34 @@ class TorCircuit:
         self.__relays = relays
         self.__ting_leg = leg
         self.__tor_sock: socket.socket = socket.socket()
-        self.__circuit_id = None
+        self.__circuit_id: int
         self.__dest_ip = dest_ip
         self.__dest_port = dest_port
 
-        self.__max_circuit_build_attempts = kwargs.get(
+        self.__max_circuit_build_attempts = int(kwargs.get(
             "MaxCircuitBuildAttempts", self.__DEFAULT_MAX_BUILD_ATTEMPTS
-        )
-        self.__socks_port = kwargs.get("SocksPort", self.__DEFAULT_SOCKS_PORT)
-        self.__socks_timeout = kwargs.get(
+        ))
+        self.__socks_port = int(kwargs.get("SocksPort", self.__DEFAULT_SOCKS_PORT))
+        self.__socks_timeout = int(kwargs.get(
             "SocksTimeout", self.__DEFAULT_SOCKS_TIMEOUT_SEC
-        )
+        ))
         self.__controller = controller
-        self.__probe: Callable[[Any], Any] = None
+        self.__probe: Callable[[Any], Any]
         self.__build_time: float = 0.0
 
     def __exit__(self, exc_type: Exception, exc_value: str, exc_traceback: str) -> None:
         self.close()
 
-    def __enter__(self) -> T:
+    def __enter__(self: TC) -> TC:
         return self.build()
 
-    def build(self) -> T:
+    def build(self: TC) -> TC:
         """Build the circuit.
 
         :return Time to build the circuit in milliseconds."""
-        cid, last_exception, failures = None, None, 0
+        cid, failures = None, 0
 
+        last_exception: Exception
         while failures < self.__max_circuit_build_attempts:
             try:
                 log("Building circuit...")
@@ -164,29 +165,18 @@ class TorCircuit:
         sock.settimeout(self.__socks_timeout)
         return sock
 
-    def sample(self, num_samples=1) -> float:
+    def sample(self) -> float:
         """Take a Ting measurement on this circuit. Results in seconds.
         :param num_samples The number of measurements to take. Defaults to 1."""
-        arr, num_seen = [], 0
 
         try:
-            while num_seen < num_samples:
-                logging.debug("Tinging. Sample %d", num_seen + 1)
-                start_time = time.time()
-                self.__tor_sock.send(bytes("!c!", "utf-8"))
-                self.__tor_sock.recv(1024)
-                end_time = time.time()
-                arr.append((end_time - start_time))
-                num_seen += 1
-                # time.sleep(1)
-
-            logging.debug("Ending ting after %d sample(s)", num_seen)
-
-            if len(arr) == 1:
-                return arr[0]
-
-            return arr
-
+            logging.debug("Tinging...")
+            start_time = time.time()
+            self.__tor_sock.send(bytes("!c!", "utf-8"))
+            self.__tor_sock.recv(1024)
+            end_time = time.time()
+            logging.debug("Ending ting.")
+            return end_time - start_time
         except socket.error as exc:
             warning(
                 "Failed to connect using the given circuit: "
@@ -197,10 +187,10 @@ class TorCircuit:
                 self.close()
 
             raise CircuitConnectionException(
-                "Failed to connect using the given circuit: ", "", str(exc)
+                "Failed to connect using the given circuit: ", "", exc
             )
 
-    def close(self):
+    def close(self) -> None:
         """Close the Tor socket."""
         try:
             # Tell echo server that this connection is over
@@ -218,22 +208,22 @@ class TorCircuit:
         self.__tor_sock.close()
 
     @property
-    def leg(self):
+    def leg(self) -> TingLeg:
         """Getter method for the Ting circuit leg."""
         return self.__ting_leg
 
     @property
-    def relays(self):
+    def relays(self) -> List[Fingerprint]:
         """Getter method for the relays in the circuit."""
         return self.__relays
 
     @property
-    def circuit_id(self):
+    def circuit_id(self) -> int:
         """Get the circuit ID. If circuit has not been built, returns None."""
         return self.__circuit_id
 
     @property
-    def circuit_build_time(self):
+    def circuit_build_time(self) -> float:
         """Returns the time taken to build the circuit. None if circuit has not
         been built yet."""
         return self.__build_time
@@ -263,6 +253,6 @@ class TingCircuit:
         return self.__xy_circ
 
     @property
-    def all(self) -> Tuple[TorCircuit]:
+    def all(self) -> Tuple[TorCircuit, TorCircuit, TorCircuit]:
         """Returns all legs of the Tor measurement."""
         return (self.__x_circ, self.__y_circ, self.__xy_circ)
