@@ -86,7 +86,7 @@ if __name__ == "__main__":
     parser.add_argument("--dest-port", help="port of local echo server (default 16667)")
     parser.add_argument(
         "--num-samples",
-        help="number of samples for each circuit (default 200)",
+        help="number of samples for each circuit (default 10)",
         type=int,
     )
     parser.add_argument(
@@ -125,7 +125,7 @@ if __name__ == "__main__":
 
     signal.signal(
         signal.SIGINT, catch_sigint
-    )  # Still write output even if process killed
+    )
 
     print(
         ting(
