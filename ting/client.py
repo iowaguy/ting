@@ -59,13 +59,15 @@ class TingClient:
         try:
             self.__controller = self.__init_controller(controller_port)
         except ConnectionRefusedError as err:
-            failure("Could not download consensus. Do this machine have a"
-                    "public, static IP?")
+            failure(
+                "Could not download consensus. Do this machine have a"
+                "public, static IP?"
+            )
             # raise err
 
     @classmethod
     def __init_controller(cls, controller_port):
-        
+
         controller = Controller.from_port(port=controller_port)
         if not controller:
             failure("Couldn't connect to Tor, Controller.from_port failed")

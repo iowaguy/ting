@@ -14,11 +14,11 @@ TOR_DATA_W=${TOR_DATA}/w
 TOR_DATA_Z=${TOR_DATA}/z
 
 kill_all() {
-  ps -ef | grep "$1 " | grep -v grep | awk '{print $2}' | xargs kill -9
+  ps -ef | grep "$1" | grep -v grep | awk '{print $2}' | xargs kill -9
 }
 
 kill_tor() {
-  kill_all tor &> /dev/null
+  kill_all "tor " &> /dev/null
 }
 
 kill_echo_server() {

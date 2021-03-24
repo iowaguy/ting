@@ -43,6 +43,13 @@ used, the consensus will be downloaded from directory authorities of the
 _actual_ Tor network. If `test` is supplied, a local directory authority will be
 used.
 
+During development and testing, it can be useful to have vagrant stay in sync
+with the local disk. If it is not happening automatically, runner
+
+``` shell
+vagrant rsync-auto
+```
+
 ## API Docs
 To generate documentation, install `pdoc`
 ``` shell

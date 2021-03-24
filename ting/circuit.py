@@ -3,7 +3,7 @@
 import logging
 import socket
 import time
-from typing import List, ClassVar
+from typing import List, ClassVar, Tuple
 
 from stem import (
     OperationFailed,
@@ -153,7 +153,7 @@ class TorCircuit:
                 )
 
             raise CircuitConnectionException(
-                "Failed to connect using the given circuit: ", "", str(exc)
+                "Failed to connect using the given circuit: ", "", exc
             )
 
     # Tell socks to use tor as a proxy
@@ -163,15 +163,15 @@ class TorCircuit:
         sock.settimeout(self.__socks_timeout)
         return sock
 
-    def sample(self, num_samples=1):
+    def sample(self, num_samples=1) -> float:
         """Take a Ting measurement on this circuit. Results in seconds.
         :param num_samples The number of measurements to take. Defaults to 1."""
         arr, num_seen = [], 0
 
         try:
             while num_seen < num_samples:
-                start_time = time.time()
                 logging.debug("Tinging. Sample %d", num_seen + 1)
+                start_time = time.time()
                 self.__tor_sock.send(bytes("!c!", "utf-8"))
                 self.__tor_sock.recv(1024)
                 end_time = time.time()
@@ -247,21 +247,21 @@ class TingCircuit:
         self.__xy_circ = xy
 
     @property
-    def x_circ(self):
+    def x_circ(self) -> TorCircuit:
         """Getter method for circuit x."""
         return self.__x_circ
 
     @property
-    def y_circ(self):
+    def y_circ(self) -> TorCircuit:
         """Getter method for circuit y."""
         return self.__y_circ
 
     @property
-    def xy_circ(self):
+    def xy_circ(self) -> TorCircuit:
         """Getter method for circuit xy."""
         return self.__xy_circ
 
     @property
-    def all(self):
+    def all(self) -> Tuple[TorCircuit]:
         """Returns all legs of the Tor measurement."""
-        return [self.__x_circ, self.__y_circ, self.__xy_circ]
+        return (self.__x_circ, self.__y_circ, self.__xy_circ)
