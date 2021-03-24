@@ -4,8 +4,9 @@
 
 import logging
 import select
-import socket
+from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
 
+from ting.utils import IPAddress
 
 class EchoServer:
     """A simple echo server for Ting to contact."""
@@ -13,11 +14,11 @@ class EchoServer:
     __MESSAGE_SIZE = 3
     __TIMEOUT = 0.5
 
-    def __init__(self, host="0.0.0.0", port=16667):
+    def __init__(self, host: IPAddress = "0.0.0.0", port: int = 16667) -> None:
         self.echo_socket = self.__setup_socket(host, port)
         self.running = False
 
-    def run(self):
+    def run(self) -> None:
         """Start the echo server."""
         self.running = True
         read_list = [self.echo_socket]
@@ -40,14 +41,14 @@ class EchoServer:
                     read_list.remove(sock)
                     logging.info("Connection closed.")
 
-    def is_running(self):
+    def is_running(self) -> bool:
         """Return True if echo server is running locally."""
         return self.running
 
     @classmethod
-    def __setup_socket(cls, host, port):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    def __setup_socket(cls, host: IPAddress, port: int) -> socket:
+        sock = socket(AF_INET, SOCK_STREAM)
+        sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         sock.bind((host, port))
 
         backlog = 1
