@@ -21,7 +21,8 @@ from ting.exceptions import (
 from ting.logging import log, success, warning, Color
 from ting.utils import Fingerprint, TingLeg, Port, IPAddress
 
-TC = TypeVar('TC', bound='TorCircuit')
+TC = TypeVar("TC", bound="TorCircuit")
+
 
 class TorCircuit:
     """A class for building and interacting with Tor circuits."""
@@ -39,7 +40,7 @@ class TorCircuit:
         leg: TingLeg,
         dest_ip: IPAddress,
         dest_port: Port,
-        **kwargs: Union[int, str]
+        **kwargs: Union[int, str],
     ) -> None:
         """
         :param controller This is a
@@ -53,13 +54,13 @@ class TorCircuit:
         self.__dest_ip = dest_ip
         self.__dest_port = dest_port
 
-        self.__max_circuit_build_attempts = int(kwargs.get(
-            "MaxCircuitBuildAttempts", self.__DEFAULT_MAX_BUILD_ATTEMPTS
-        ))
+        self.__max_circuit_build_attempts = int(
+            kwargs.get("MaxCircuitBuildAttempts", self.__DEFAULT_MAX_BUILD_ATTEMPTS)
+        )
         self.__socks_port = int(kwargs.get("SocksPort", self.__DEFAULT_SOCKS_PORT))
-        self.__socks_timeout = int(kwargs.get(
-            "SocksTimeout", self.__DEFAULT_SOCKS_TIMEOUT_SEC
-        ))
+        self.__socks_timeout = int(
+            kwargs.get("SocksTimeout", self.__DEFAULT_SOCKS_TIMEOUT_SEC)
+        )
         self.__controller = controller
         self.__probe: Callable[[Any], Any]
         self.__build_time: float = 0.0

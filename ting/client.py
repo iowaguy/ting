@@ -35,14 +35,14 @@ class TingClient:
         **kwargs: Union[int, str],
     ) -> None:
         self.__kwargs = kwargs
-        self.destination_port = int(kwargs.get(
-            "DestinationPort", self.__DEFAULT_ECHO_SERVER_PORT
-        ))
-        
+        self.destination_port = int(
+            kwargs.get("DestinationPort", self.__DEFAULT_ECHO_SERVER_PORT)
+        )
+
         self.source_addr = local_ip
-        self.destination_addr = str(kwargs.get(
-            "DestinationAddr", self.__DEFAULT_ECHO_SERVER_IP
-        ))
+        self.destination_addr = str(
+            kwargs.get("DestinationAddr", self.__DEFAULT_ECHO_SERVER_IP)
+        )
 
         self.w_fp = relay_w_fp
         self.z_fp = relay_z_fp
@@ -54,7 +54,9 @@ class TingClient:
 
         self.relay_list: Dict[IPAddress, Fingerprint]
         self.fp_to_ip: Dict[Fingerprint, IPAddress]
-        controller_port = int(kwargs.get("ControllerPort", self.__DEFAULT_CONTROLLER_PORT))
+        controller_port = int(
+            kwargs.get("ControllerPort", self.__DEFAULT_CONTROLLER_PORT)
+        )
 
         try:
             self.__controller = self.__init_controller(controller_port)
@@ -145,7 +147,9 @@ class TingClient:
     def __seconds_to_hours(cls, seconds: int) -> float:
         return seconds / 3600
 
-    def __parse_relay_list(self, test_relays: bool = False, relay_cache_time: int = 24) -> None:
+    def __parse_relay_list(
+        self, test_relays: bool = False, relay_cache_time: int = 24
+    ) -> None:
         data = None
         if not test_relays:
             if os.path.exists("./cache") and len(os.listdir("./cache")) > 0:
@@ -172,7 +176,7 @@ class TingClient:
                      few seconds)"
                 )
                 data = json.load(
-                    urllib.request.urlopen(
+                    urllib.request.urlopen(  # type: ignore
                         "https://onionoo.torproject.org/details?type=relay&"
                         "running=true&fields=nickname,fingerprint,or_addresses"
                     )

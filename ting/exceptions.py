@@ -4,6 +4,7 @@ from typing import List
 
 from ting.utils import Fingerprint
 
+
 class NotReachableException(Exception):
     """This error will be raised when a host is not reachable."""
 

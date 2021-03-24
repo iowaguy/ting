@@ -6,6 +6,7 @@ import logging
 from os.path import realpath, dirname
 import signal
 import sys
+from typing import Any, Callable, Dict, List
 
 script_dir = dirname(realpath(__file__))
 
@@ -16,9 +17,52 @@ from ting import ting
 from ting.client import TingClient
 from ting.logging import failure, log
 
+
+def __read_config_file(path: str) -> List[str]:
+    with open(path) as f:
+        log(f"Read config file {path}")
+        lines = f.readlines()
+    return lines
+
+
+def __assemble_configuration_dict(path: str) -> Dict[str, Any]:
+    config: Dict[str, Any] = {}
+    for line in __read_config_file(path):
+        pair = line.strip().split()
+
+        try:
+            config[pair[0]] = int(pair[1])
+        except ValueError:
+            config[pair[0]] = pair[1]
+    if "InputFile" not in config:
+        config["InputFile"] = None
+
+    arg_overrides = [
+        (args.num_repeats, "NumRepeats"),
+        (args.num_samples, "NumSamples"),
+        (args.dest_port, "DestinationPort"),
+        (args.input_file, "InputFile"),
+        (args.output_file, "ResultsDirectory"),
+    ]
+
+    for override in arg_overrides:
+        if override[0] is not None:
+            try:
+                config[override[1]] = int(override[0])
+            except ValueError:
+                config[override[1]] = override[0]
+
+    if args.relay1 and args.relay2:
+        config["Pair"] = (args.relay1, args.relay2)
+    else:
+        config["Pair"] = None
+
+    return config
+
+
 if __name__ == "__main__":
     RESULT_DIRECTORY = "results"
-    parser = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(  # pylint: disable=invalid-name
         prog="ting",
         description="Measure latency between either a pair of Tor relays\
                      (relay1,relay2), or a list of pairs, specified with\
@@ -67,65 +111,29 @@ if __name__ == "__main__":
         default="INFO",
         help="The log level.",
     )
-    args = parser.parse_args()
+    args = parser.parse_args()  # pylint: disable=invalid-name
 
     logging.getLogger().setLevel(level=getattr(logging, args.log_level.upper()))
 
-    try:
-        f = open(args.config_file)
-    except IOError:
-        failure("Couldn't find a tingrc config file. Try running ./configure.sh")
-    log("Read config file " + args.config_file)
-    r = f.readlines()
-    f.close()
+    configuration = __assemble_configuration_dict(  # pylint: disable=invalid-name
+        args.config_file
+    )
 
-    config = {}
-    for l in r:
-        pair = l.strip().split()
-
-        try:
-            config[pair[0]] = int(pair[1])
-        except ValueError:
-            config[pair[0]] = pair[1]
-    if "InputFile" not in config:
-        config["InputFile"] = None
-
-    arg_overrides = [
-        (args.num_repeats, "NumRepeats"),
-        (args.num_samples, "NumSamples"),
-        (args.dest_port, "DestinationPort"),
-        (args.input_file, "InputFile"),
-        (args.output_file, "ResultsDirectory"),
-    ]
- 
-    for override in arg_overrides:
-        if override[0] is not None:
-            try:
-                config[override[1]] = int(override[0])
-            except ValueError:
-                config[override[1]] = override[0]
-
-    if args.relay1 and args.relay2:
-        config["Pair"] = (args.relay1, args.relay2)
-    else:
-        config["Pair"] = None
-
-    ########## CONFIG END ##########
-
-    def catch_sigint(signal, frame):
+    def catch_sigint(sig: Any, frame: Any) -> None:  # pylint: disable=unused-argument
+        """Catch SIGINT and exit with return code zero."""
         sys.exit(0)
 
     signal.signal(
         signal.SIGINT, catch_sigint
     )  # Still write output even if process killed
 
-    local_test = config["RelayList"] == "test"
-    results = ting(
-        [(args.relay1, args.relay2)],
-        config["W"],
-        config["Z"],
-        config["SourceAddr"],
-        num_samples=10,
-        local_test=local_test,
+    print(
+        ting(
+            [(args.relay1, args.relay2)],
+            configuration["W"],
+            configuration["Z"],
+            configuration["SourceAddr"],
+            num_samples=10,
+            local_test=(configuration["RelayList"] == "test"),
+        )
     )
-    print(results)

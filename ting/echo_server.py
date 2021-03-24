@@ -8,6 +8,7 @@ from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
 
 from ting.utils import IPAddress
 
+
 class EchoServer:
     """A simple echo server for Ting to contact."""
 
