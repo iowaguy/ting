@@ -3,7 +3,7 @@
 import logging
 import socket
 import time
-from typing import List, ClassVar, Tuple
+from typing import Any, Callable, ClassVar, List, Tuple, TypeVar
 
 from stem import (
     OperationFailed,
@@ -21,6 +21,7 @@ from ting.exceptions import (
 from ting.logging import log, success, warning, Color
 from ting.utils import Fingerprint, TingLeg, Port, IPAddress
 
+T = TypeVar('T', bound='TorCircuit')
 
 class TorCircuit:
     """A class for building and interacting with Tor circuits."""
@@ -38,8 +39,8 @@ class TorCircuit:
         leg: TingLeg,
         dest_ip: IPAddress,
         dest_port: Port,
-        **kwargs,
-    ):
+        **kwargs: int,
+    ) -> None:
         """
         :param controller This is a
 -        [stem controller][https://stem.torproject.org/api/control.html] object.
@@ -47,7 +48,7 @@ class TorCircuit:
         """
         self.__relays = relays
         self.__ting_leg = leg
-        self.__tor_sock = None
+        self.__tor_sock: socket.socket = socket.socket()
         self.__circuit_id = None
         self.__dest_ip = dest_ip
         self.__dest_port = dest_port
@@ -60,16 +61,16 @@ class TorCircuit:
             "SocksTimeout", self.__DEFAULT_SOCKS_TIMEOUT_SEC
         )
         self.__controller = controller
-        self.__probe = None
-        self.__build_time = None
+        self.__probe: Callable[[Any], Any] = None
+        self.__build_time: float = 0.0
 
-    def __exit__(self, exc_type, exc_value, exc_traceback):
+    def __exit__(self, exc_type: Exception, exc_value: str, exc_traceback: str) -> None:
         self.close()
 
-    def __enter__(self):
+    def __enter__(self) -> T:
         return self.build()
 
-    def build(self):
+    def build(self) -> T:
         """Build the circuit.
 
         :return Time to build the circuit in milliseconds."""
@@ -107,9 +108,9 @@ class TorCircuit:
 
         raise last_exception
 
-    def __configure_listeners(self, circuit_id):
+    def __configure_listeners(self, circuit_id: int) -> None:
         # Attaches a specific circuit to the given stream (event)
-        def attach_stream(event):
+        def attach_stream(event: EventType) -> None:
             try:
                 self.__controller.attach_stream(event.id, circuit_id)
             except (OperationFailed, InvalidRequest) as exc:
@@ -122,7 +123,7 @@ class TorCircuit:
                 self.__controller.close_stream(event.id)
 
         # An event listener, called whenever StreamEvent status changes
-        def probe_stream(event):
+        def probe_stream(event: EventType) -> None:
             if event.status == "DETACHED":
                 if circuit_id:
                     warning(f"Stream Detached from circuit {circuit_id}...")
@@ -135,7 +136,7 @@ class TorCircuit:
         self.__probe = probe_stream
         self.__controller.add_event_listener(probe_stream, EventType.STREAM)
 
-    def __connect_to_dest(self, dest_ip: IPAddress, dest_port: Port):
+    def __connect_to_dest(self, dest_ip: IPAddress, dest_port: Port) -> None:
         try:
             log("\tTrying to connect to endpoint..")
 
@@ -157,7 +158,7 @@ class TorCircuit:
             )
 
     # Tell socks to use tor as a proxy
-    def __setup_proxy(self):
+    def __setup_proxy(self) -> socket.socket:
         sock = socks.socksocket()
         sock.set_proxy(self.__SOCKS_TYPE, self.__SOCKS_HOST, self.__socks_port)
         sock.settimeout(self.__socks_timeout)
