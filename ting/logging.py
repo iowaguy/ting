@@ -18,29 +18,29 @@ class Color:
     END = "\033[0m"
 
 
-def success(msg):
+def success(msg: str) -> None:
     logging.info(msg)
 
 
-def warning(msg):
+def warning(msg: str) -> None:
     logging.warning(msg)
 
 
-def failure(msg):
+def failure(msg: str) -> None:
     """Log a critical failure and exit."""
     logging.critical(msg)
     sys.exit(-1)
 
 
-def log(msg):
+def log(msg: str) -> None:
     logging.info(msg)
 
 
-def debug(msg):
+def debug(msg: str) -> None:
     logging.debug(msg)
 
 
-def notify(msg_type, msg):
+def notify(msg_type: str, msg: str) -> None:
     """Send email alert."""
     if EMAIL_ADDR:
         os.system(
