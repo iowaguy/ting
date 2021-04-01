@@ -8,6 +8,7 @@ from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
 from threading import Event
 import time
 
+import ting.timer_pb2
 from ting.utils import IPAddress, Port
 
 
@@ -39,8 +40,10 @@ class EchoServer:
                     self.__logger.info("Connection accepted from %s", str(address))
                 else:
                     data = sock.recv(EchoServer.__MESSAGE_SIZE)
-                    self.__logger.debug("Data received: %s", data)
-                    if not data or (str(bytes("!c", "utf-8") + data)) == "X":
+                    timer = ting.timer_pb2.Ting()
+                    timer.ParseFromString(data)
+                    self.__logger.debug("Data received: %s", timer)
+                    if not data or timer.type == ting.timer_pb2.Ting.Packet.CLOSE:
                         self.__logger.debug("Client is closing connection.")
                         sock.close()
                         read_list.remove(sock)
@@ -48,13 +51,12 @@ class EchoServer:
                         continue
 
                     # If we're here, then the client is tinging us
-                    self.__event.set()
+                    timer.Clear()
+                    timer.type = ting.timer_pb2.Ting.Packet.TING
+                    timer.time_sec = time.time()
                     self.__logger.debug("Echoing data: %s", data)
-                    start_time = time.time()
-                    sock.send(data)
-                    self.__event.wait()
-                    stop_time = time.time()
-                    # TODO report stop_time - start_time to main thread
+                    sock.send(timer.SerializeToString())
+
 
     def is_running(self) -> bool:
         """Return True if echo server is running locally."""

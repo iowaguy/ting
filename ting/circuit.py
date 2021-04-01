@@ -14,18 +14,20 @@ from stem import (
 from stem.control import Controller, EventType
 
 import socks
+
 from ting.exceptions import (
     CircuitConnectionException,
     ConnectionAlreadyExistsException,
     TorShutdownException,
 )
 from ting.logging import Color
+import ting.timer_pb2
 from ting.utils import Fingerprint, TingLeg, Port, IPAddress
 
 TC = TypeVar("TC", bound="TorCircuit")
 
 
-class TorCircuit:
+class TorCircuit:  # pylint: too-many-instance-attributes
     """A class for building and interacting with Tor circuits."""
 
     __DEFAULT_MAX_BUILD_ATTEMPTS: ClassVar[int] = 5
@@ -43,7 +45,7 @@ class TorCircuit:
         dest_port: Port,
         event: Event,
         **kwargs: Union[int, str],
-    ) -> None:
+    ) -> None:  # pylint: too-many-arguments
         """
         :param controller This is a
 -        [stem controller][https://stem.torproject.org/api/control.html] object.
@@ -105,7 +107,7 @@ class TorCircuit:
             except (InvalidRequest, CircuitExtensionFailed) as exc:
                 failures += 1
                 if "message" in vars(exc):
-                    self.__logger.warning("{0}".format(vars(exc)["message"]))
+                    self.__logger.warning("%s", vars(exc)["message"])
                 else:
                     self.__logger.warning("Failed to create circuit, reason unknown.")
                 if self.__circuit_id is not None:
@@ -121,8 +123,9 @@ class TorCircuit:
                 self.__controller.attach_stream(event.id, circuit_id)
             except (OperationFailed, InvalidRequest) as exc:
                 self.__logger.warning(
-                    f"Failed to attach stream to {circuit_id}, unknown circuit."
-                    "Closing stream..."
+                    "Failed to attach stream to %s, unknown circuit."
+                    "Closing stream...",
+                    circuit_id,
                 )
                 self.__logger.info("\tResponse Code: %s " % str(exc.code))
                 self.__logger.info("\tMessage: %s" % str(exc.message))
@@ -133,11 +136,11 @@ class TorCircuit:
             if event.status == "DETACHED":
                 if circuit_id:
                     self.__logger.warning(
-                        f"Stream Detached from circuit {circuit_id}..."
+                        f"Stream Detached from circuit %s...", circuit_id
                     )
                 else:
                     self.__logger.warning("Stream Detached from circuit...")
-                self.__logger.info("\t" + str(vars(event)))
+                self.__logger.info("\t%s", str(vars(event)))
             if event.status == "NEW" and event.purpose == "USER":
                 attach_stream(event)
 
@@ -154,9 +157,9 @@ class TorCircuit:
             )
         except socket.error as exc:
             self.__logger.warning(
-                "Failed to connect to the endpoint using the given circuit: "
-                + str(exc)
-                + "\nClosing connection."
+                "Failed to connect to the endpoint using the given circuit: %s"
+                "\nClosing connection.",
+                str(exc),
             )
             if self.__tor_sock:
                 raise ConnectionAlreadyExistsException(
@@ -179,22 +182,24 @@ class TorCircuit:
         :param num_samples The number of measurements to take. Defaults to 1."""
 
         try:
-            msg = bytes("!c!", "utf-8")
-            self.__logger.debug("Sending %s", msg)
+            timer = ting.timer_pb2.Ting()
+            timer.type = ting.timer_pb2.Ting.Packet.TING
+            msg = timer.SerializeToString()
             start_time = time.time()
             self.__tor_sock.send(msg)
-            self.__event.wait()
+            self.__logger.debug("Sending %s", msg)
+
+            timer.Clear()
+            data = self.__tor_sock.recv(1024)
             stop_time = time.time()
-            self.__event.clear()
-            self.__tor_sock.recv(1024)
-            self.__event.set()
-            incoming_time = stop_time - start_time
-            return (incoming_time, incoming_time)
+            timer.ParseFromString(data)
+            outgoing_time = timer.time_sec - start_time
+            incoming_time = stop_time - timer.time_sec
+            return (outgoing_time, incoming_time)
         except socket.error as exc:
             self.__logger.warning(
-                "Failed to connect using the given circuit: "
-                + str(exc)
-                + "\nClosing connection."
+                "Failed to connect using the given circuit: %s" "\nClosing connection.",
+                str(exc),
             )
             if self.__tor_sock:
                 self.close()
@@ -206,8 +211,11 @@ class TorCircuit:
     def close(self) -> None:
         """Close the Tor socket."""
         try:
+            timer = ting.timer_pb2.Ting()
+            timer.type = ting.timer_pb2.Ting.Packet.CLOSE
+
             # Tell echo server that this connection is over
-            self.__tor_sock.send(bytes("!cX", "utf-8"))
+            self.__tor_sock.send(timer.SerializeToString())
 
             self.__logger.debug("Tearing down Tor circuit.")
             self.__controller.close_circuit(self.__circuit_id)

@@ -12,7 +12,7 @@ import urllib
 from stem.control import Controller
 import stem.descriptor.remote
 
-import ting.ting
+import ting
 from ting.circuit import TorCircuit, TingCircuit
 from ting.echo_server import EchoServer
 from ting.exceptions import ConnectionAlreadyExistsException

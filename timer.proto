@@ -1,0 +1,14 @@
+syntax = "proto2";
+
+package ting;
+
+message Ting {
+  optional double time_sec = 1;
+
+  enum Packet {
+    CLOSE = 0;
+    TING = 1;
+  }
+
+  required Packet type = 2;
+}

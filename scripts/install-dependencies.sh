@@ -32,4 +32,4 @@ sudo apt-get install -y\
      screen\
      emacs
 
-pip3 install stem PySocks
+pip3 install stem PySocks protobuf
