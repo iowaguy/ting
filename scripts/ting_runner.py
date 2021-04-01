@@ -123,9 +123,7 @@ if __name__ == "__main__":
         """Catch SIGINT and exit with return code zero."""
         sys.exit(0)
 
-    signal.signal(
-        signal.SIGINT, catch_sigint
-    )
+    signal.signal(signal.SIGINT, catch_sigint)
 
     print(
         ting(

@@ -18,7 +18,7 @@ from ting.exceptions import (
     ConnectionAlreadyExistsException,
     TorShutdownException,
 )
-from ting.logging import log, success, warning, Color
+from ting.logging import Color
 from ting.utils import Fingerprint, TingLeg, Port, IPAddress
 
 TC = TypeVar("TC", bound="TorCircuit")
@@ -47,6 +47,7 @@ class TorCircuit:
 -        [stem controller][https://stem.torproject.org/api/control.html] object.
         :param relays This is a list of fingerprints of relays to connect to.
         """
+        self.__logger = logging.getLogger(__name__)
         self.__relays = relays
         self.__ting_leg = leg
         self.__tor_sock: socket.socket = socket.socket()
@@ -64,6 +65,7 @@ class TorCircuit:
         self.__controller = controller
         self.__probe: Callable[[Any], Any]
         self.__build_time: float = 0.0
+        self.__event = event
 
     def __exit__(self, exc_type: Exception, exc_value: str, exc_traceback: str) -> None:
         self.close()
@@ -80,19 +82,19 @@ class TorCircuit:
         last_exception: Exception
         while failures < self.__max_circuit_build_attempts:
             try:
-                log("Building circuit...")
+                self.__logger.info("Building circuit...")
                 start_build = time.time()
                 cid = self.__controller.new_circuit(self.relays, await_build=True)
                 self.__circuit_id = cid
                 end_build = time.time()
-                success("Circuit built successfully.")
+                self.__logger.info("Circuit built successfully.")
 
-                log("Configuring event listener...")
+                self.__logger.info("Configuring event listener...")
                 self.__configure_listeners(cid)
-                log("Event listener setup is complete.")
-                log("Setting up SOCKS proxy...")
+                self.__logger.info("Event listener setup is complete.")
+                self.__logger.info("Setting up SOCKS proxy...")
                 self.__tor_sock = self.__setup_proxy()
-                log("SOCKS proxy setup complete.")
+                self.__logger.info("SOCKS proxy setup complete.")
 
                 self.__build_time = round(end_build - start_build, 5)
                 self.__connect_to_dest(self.__dest_ip, self.__dest_port)
@@ -101,9 +103,9 @@ class TorCircuit:
             except (InvalidRequest, CircuitExtensionFailed) as exc:
                 failures += 1
                 if "message" in vars(exc):
-                    warning("{0}".format(vars(exc)["message"]))
+                    self.__logger.warning("{0}".format(vars(exc)["message"]))
                 else:
-                    warning("Failed to create circuit, reason unknown.")
+                    self.__logger.warning("Failed to create circuit, reason unknown.")
                 if self.__circuit_id is not None:
                     self.__controller.close_circuit(cid)
                 last_exception = exc
@@ -116,22 +118,22 @@ class TorCircuit:
             try:
                 self.__controller.attach_stream(event.id, circuit_id)
             except (OperationFailed, InvalidRequest) as exc:
-                warning(
+                self.__logger.warning(
                     f"Failed to attach stream to {circuit_id}, unknown circuit."
                     "Closing stream..."
                 )
-                log("\tResponse Code: %s " % str(exc.code))
-                log("\tMessage: %s" % str(exc.message))
+                self.__logger.info("\tResponse Code: %s " % str(exc.code))
+                self.__logger.info("\tMessage: %s" % str(exc.message))
                 self.__controller.close_stream(event.id)
 
         # An event listener, called whenever StreamEvent status changes
         def probe_stream(event: EventType) -> None:
             if event.status == "DETACHED":
                 if circuit_id:
-                    warning(f"Stream Detached from circuit {circuit_id}...")
+                    self.__logger.warning(f"Stream Detached from circuit {circuit_id}...")
                 else:
-                    warning("Stream Detached from circuit...")
-                log("\t" + str(vars(event)))
+                    self.__logger.warning("Stream Detached from circuit...")
+                self.__logger.info("\t" + str(vars(event)))
             if event.status == "NEW" and event.purpose == "USER":
                 attach_stream(event)
 
@@ -140,12 +142,12 @@ class TorCircuit:
 
     def __connect_to_dest(self, dest_ip: IPAddress, dest_port: Port) -> None:
         try:
-            log("\tTrying to connect to endpoint..")
+            self.__logger.info("\tTrying to connect to endpoint..")
 
             self.__tor_sock.connect((dest_ip, dest_port))
-            log(Color.SUCCESS + "\tConnected to endpoint successfully!" + Color.END)
+            self.__logger.info(Color.SUCCESS + "\tConnected to endpoint successfully!" + Color.END)
         except socket.error as exc:
-            warning(
+            self.__logger.warning(
                 "Failed to connect to the endpoint using the given circuit: "
                 + str(exc)
                 + "\nClosing connection."
@@ -197,15 +199,15 @@ class TorCircuit:
             # Tell echo server that this connection is over
             self.__tor_sock.send(bytes("!cX", "utf-8"))
 
-            logging.debug("Tearing down Tor circuit.")
+            self.__logger.debug("Tearing down Tor circuit.")
             self.__controller.close_circuit(self.__circuit_id)
             self.__controller.remove_event_listener(self.__probe)
             self.__controller = None
 
-            logging.debug("Shutting down Tor socket")
+            self.__logger.debug("Shutting down Tor socket")
             self.__tor_sock.shutdown(socket.SHUT_RDWR)
         except TorShutdownException:
-            log("There was an issue shutting down Tor, but it probably doesn't matter.")
+            self.__logger.info("There was an issue shutting down Tor, but it probably doesn't matter.")
         self.__tor_sock.close()
 
     @property
