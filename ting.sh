@@ -8,7 +8,7 @@ NETWORK_SPECS=${CHUTNEY_PATH}/networks/basic
 CHUTNEY_NODES=${CHUTNEY_PATH}/net/nodes
 TING_CONFIG_FILE=tingrc
 SCRIPTS=./scripts
-TING_LOG_LEVEL=WARNING
+TING_LOG_LEVEL=DEBUG
 TOR_DATA=${SCRIPTS}/data
 TOR_DATA_W=${TOR_DATA}/w
 TOR_DATA_Z=${TOR_DATA}/z
@@ -73,11 +73,11 @@ MaxCircuitBuildAttempts 5
 EOF
 
   grep DirAuthority ${CHUTNEY_PATH}/net/nodes/000a/torrc >> ./${TING_CONFIG_FILE}
-  ${SCRIPTS}/echo_server &
+  # ${SCRIPTS}/echo_server &
 
   ${SCRIPTS}/ting_runner.py --log-level ${TING_LOG_LEVEL} ${fingerprint_relay_x} ${fingerprint_relay_y}
 
-  kill_echo_server
+  # kill_echo_server
 }
 
 stop_test() {
