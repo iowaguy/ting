@@ -25,7 +25,6 @@ class EchoServer:
         self.running = False
         self.__event = event
 
-
     def run(self) -> None:
         """Start the echo server."""
         self.running = True

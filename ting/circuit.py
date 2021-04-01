@@ -3,6 +3,7 @@
 import logging
 import socket
 import time
+from threading import Event
 from typing import Any, Callable, ClassVar, List, Tuple, TypeVar, Union
 
 from stem import (
@@ -40,6 +41,7 @@ class TorCircuit:
         leg: TingLeg,
         dest_ip: IPAddress,
         dest_port: Port,
+        event: Event,
         **kwargs: Union[int, str],
     ) -> None:
         """
@@ -130,7 +132,9 @@ class TorCircuit:
         def probe_stream(event: EventType) -> None:
             if event.status == "DETACHED":
                 if circuit_id:
-                    self.__logger.warning(f"Stream Detached from circuit {circuit_id}...")
+                    self.__logger.warning(
+                        f"Stream Detached from circuit {circuit_id}..."
+                    )
                 else:
                     self.__logger.warning("Stream Detached from circuit...")
                 self.__logger.info("\t" + str(vars(event)))
@@ -145,7 +149,9 @@ class TorCircuit:
             self.__logger.info("\tTrying to connect to endpoint..")
 
             self.__tor_sock.connect((dest_ip, dest_port))
-            self.__logger.info(Color.SUCCESS + "\tConnected to endpoint successfully!" + Color.END)
+            self.__logger.info(
+                Color.SUCCESS + "\tConnected to endpoint successfully!" + Color.END
+            )
         except socket.error as exc:
             self.__logger.warning(
                 "Failed to connect to the endpoint using the given circuit: "
@@ -168,20 +174,24 @@ class TorCircuit:
         sock.settimeout(self.__socks_timeout)
         return sock
 
-    def sample(self) -> float:
+    def sample(self) -> Tuple[float, float]:
         """Take a Ting measurement on this circuit. Results in seconds.
         :param num_samples The number of measurements to take. Defaults to 1."""
 
         try:
-            logging.debug("Tinging...")
+            msg = bytes("!c!", "utf-8")
+            self.__logger.debug("Sending %s", msg)
             start_time = time.time()
-            self.__tor_sock.send(bytes("!c!", "utf-8"))
+            self.__tor_sock.send(msg)
+            self.__event.wait()
+            stop_time = time.time()
+            self.__event.clear()
             self.__tor_sock.recv(1024)
-            end_time = time.time()
-            logging.debug("Ending ting.")
-            return end_time - start_time
+            self.__event.set()
+            incoming_time = stop_time - start_time
+            return (incoming_time, incoming_time)
         except socket.error as exc:
-            warning(
+            self.__logger.warning(
                 "Failed to connect using the given circuit: "
                 + str(exc)
                 + "\nClosing connection."
@@ -207,7 +217,9 @@ class TorCircuit:
             self.__logger.debug("Shutting down Tor socket")
             self.__tor_sock.shutdown(socket.SHUT_RDWR)
         except TorShutdownException:
-            self.__logger.info("There was an issue shutting down Tor, but it probably doesn't matter.")
+            self.__logger.info(
+                "There was an issue shutting down Tor, but it probably doesn't matter."
+            )
         self.__tor_sock.close()
 
     @property
