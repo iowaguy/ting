@@ -15,8 +15,10 @@ Port = int
 RelayPair = Tuple[Fingerprint, Fingerprint]
 """A pair of Tor relays"""
 
+
 class TingLeg(Enum):
     """One of X, Y, or XY. The three circuits that are measured for each pair of relays."""
+
     X = "x"
     Y = "y"
     XY = "xy"
@@ -24,6 +26,7 @@ class TingLeg(Enum):
 
 class TorRelayType(Enum):
     """The position of the relay in the circuit."""
+
     GUARD = 0
     MIDDLE = 1
     EXIT = 2

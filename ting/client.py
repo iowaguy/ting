@@ -1,24 +1,29 @@
+"""Ting client definition."""
+
 from datetime import datetime
 import glob
 import json
 import os
 import os.path
-import queue
-import time
-from typing import Any, cast, ClassVar, Dict, List, Union
+from threading import Event, Thread
+from typing import Any, ClassVar, Dict, TypeVar, Union
 import urllib
 
 from stem.control import Controller
 import stem.descriptor.remote
-import socks
 
-import ting.ting
+import ting
 from ting.circuit import TorCircuit, TingCircuit
-from ting.logging import failure, notify, success
+from ting.echo_server import EchoServer
+from ting.exceptions import ConnectionAlreadyExistsException
+from ting.logging import failure, success
 from ting.utils import Fingerprint, TingLeg, IPAddress, Port
 
 
-class TingClient:
+Client = TypeVar("Client", bound="TingClient")
+
+
+class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-attributes
     """A class for managing Ting operations."""
 
     __DEFAULT_CONTROLLER_PORT: ClassVar[Port] = 8008
@@ -60,12 +65,33 @@ class TingClient:
 
         try:
             self.__controller = self.__init_controller(controller_port)
-        except ConnectionRefusedError as err:
+        except ConnectionRefusedError:
             failure(
                 "Could not download consensus. Do this machine have a"
                 "public, static IP?"
             )
-            # raise err
+
+        self.__measurement_event = Event()
+        self.__echo_server_thread = Thread(
+            target=self.__start_echo_server,
+            args=(self.__measurement_event,),
+            daemon=True,
+        )
+
+    def __exit__(self, exc_type: Exception, exc_value: str, exc_traceback: str) -> None:
+        self.__measurement_event.set()
+        self.__echo_server_thread.join()
+
+    def __enter__(self: Client) -> Client:
+        self.__echo_server_thread.start()
+        return self
+
+    @classmethod
+    def __start_echo_server(cls, event: Event) -> None:
+        echo_server = EchoServer(event)
+        if echo_server.is_running():
+            raise ConnectionAlreadyExistsException("EchoServer already exists")
+        echo_server.run()
 
     @classmethod
     def __init_controller(cls, controller_port: Port) -> Controller:
@@ -101,6 +127,7 @@ class TingClient:
                 TingLeg.X,
                 self.destination_addr,
                 self.destination_port,
+                self.__measurement_event,
                 **self.__kwargs,
             ),
             TorCircuit(
@@ -109,6 +136,7 @@ class TingClient:
                 TingLeg.Y,
                 self.destination_addr,
                 self.destination_port,
+                self.__measurement_event,
                 **self.__kwargs,
             ),
             TorCircuit(
@@ -117,31 +145,33 @@ class TingClient:
                 TingLeg.XY,
                 self.destination_addr,
                 self.destination_port,
+                self.__measurement_event,
                 **self.__kwargs,
             ),
         )
 
     def __download_dummy_consensus(self) -> None:
-        try:
-            self.relay_list = {}
-            self.fp_to_ip = {}
-            for descriptor in stem.descriptor.remote.get_consensus(
-                endpoints=(stem.ORPort("127.0.0.1", 5000),)
-            ):
-                self.fp_to_ip[
-                    descriptor.fingerprint.encode("ascii", "ignore")
-                ] = "127.0.0.1"
-        except Exception as exc:
-            print("Unable to retrieve the consensus: %s" % exc)
+        self.relay_list = {}
+        self.fp_to_ip = {}
+        for descriptor in stem.descriptor.remote.get_consensus(
+            endpoints=(stem.ORPort("127.0.0.1", 5000),)
+        ):
+            self.fp_to_ip[
+                descriptor.fingerprint.encode("ascii", "ignore")
+            ] = "127.0.0.1"
 
     def __load_consensus(self, data: Dict[str, Any]) -> None:
         self.relay_list = {}
         self.fp_to_ip = {}
         for relay in data["relays"]:
             if "or_addresses" in relay:
-                ip = relay["or_addresses"][0].split(":")[0]
-                self.relay_list[ip] = relay["fingerprint"].encode("ascii", "ignore")
-                self.fp_to_ip[relay["fingerprint"].encode("ascii", "ignore")] = ip
+                ip_address = relay["or_addresses"][0].split(":")[0]
+                self.relay_list[ip_address] = relay["fingerprint"].encode(
+                    "ascii", "ignore"
+                )
+                self.fp_to_ip[
+                    relay["fingerprint"].encode("ascii", "ignore")
+                ] = ip_address
 
     @classmethod
     def __seconds_to_hours(cls, seconds: int) -> float:
@@ -167,9 +197,9 @@ class TingClient:
                         "Found list of relays in cache that is "
                         f"{hours_since_last} hours old. Using that..."
                     )
-                    with open(most_recent_list) as f:
-                        r = f.read()
-                        data = json.loads(r)
+                    with open(most_recent_list) as file:
+                        contents = file.read()
+                        data = json.loads(contents)
             if not data:
                 ting.logging.log(
                     "Downloading current list of relays.. (this may take a \
@@ -186,8 +216,8 @@ class TingClient:
                 )
                 if not os.path.exists("./cache"):
                     os.mkdir("./cache")
-                with open(new_cache_file, "w") as f:
-                    f.write(json.dumps(data))
+                with open(new_cache_file, "w") as file:
+                    file.write(json.dumps(data))
             self.__load_consensus(data)
         elif test_relays:
             self.__download_dummy_consensus()

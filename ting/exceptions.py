@@ -1,8 +1,6 @@
 """A module of exceptions."""
 
-from typing import List
-
-from ting.utils import Fingerprint
+from typing import Optional
 
 
 class NotReachableException(Exception):
@@ -36,7 +34,7 @@ class TingException(Exception):
 class ConnectionAlreadyExistsException(Exception):
     """This error will be raised when a connection is attempted where one already exists."""
 
-    def __init__(self, msg: str, exc: Exception) -> None:
+    def __init__(self, msg: str, exc: Optional[Exception] = None) -> None:
         super().__init__(msg)
         self.msg = msg
         self.exc = exc
