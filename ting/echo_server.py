@@ -31,6 +31,8 @@ class EchoServer:
         self.running = True
         read_list = [self.echo_socket]
         while True:
+            if self.__event.is_set():
+                return
             readable, _, _ = select.select(read_list, [], [], EchoServer.__TIMEOUT)
             self.__logger.debug("Socket is ready to read")
             for sock in readable:
@@ -56,7 +58,6 @@ class EchoServer:
                     timer.time_sec = time.time()
                     self.__logger.debug("Echoing data: %s", data)
                     sock.send(timer.SerializeToString())
-
 
     def is_running(self) -> bool:
         """Return True if echo server is running locally."""

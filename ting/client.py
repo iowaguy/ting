@@ -6,7 +6,7 @@ import json
 import os
 import os.path
 from threading import Event, Thread
-from typing import Any, ClassVar, Dict, Union
+from typing import Any, ClassVar, Dict, TypeVar, Union
 import urllib
 
 from stem.control import Controller
@@ -18,6 +18,9 @@ from ting.echo_server import EchoServer
 from ting.exceptions import ConnectionAlreadyExistsException
 from ting.logging import failure, success
 from ting.utils import Fingerprint, TingLeg, IPAddress, Port
+
+
+Client = TypeVar("Client", bound="TingClient")
 
 
 class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-attributes
@@ -70,9 +73,18 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
 
         self.__measurement_event = Event()
         self.__echo_server_thread = Thread(
-            target=self.__start_echo_server, args=(self.__measurement_event,)
+            target=self.__start_echo_server,
+            args=(self.__measurement_event,),
+            daemon=True,
         )
+
+    def __exit__(self, exc_type: Exception, exc_value: str, exc_traceback: str) -> None:
+        self.__measurement_event.set()
+        self.__echo_server_thread.join()
+
+    def __enter__(self: Client) -> Client:
         self.__echo_server_thread.start()
+        return self
 
     @classmethod
     def __start_echo_server(cls, event: Event) -> None:

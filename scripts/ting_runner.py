@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 
 import argparse
-from datetime import datetime
 import logging
 from os.path import realpath, dirname
 import signal
 import sys
-from typing import Any, Callable, Dict, List
+from typing import Any, Dict, List
 
 script_dir = dirname(realpath(__file__))
 
@@ -14,14 +13,14 @@ script_dir = dirname(realpath(__file__))
 sys.path.append(script_dir + "/../")
 
 from ting import ting
-from ting.client import TingClient
-from ting.logging import failure, log
+
+__LOGGER = logging.getLogger(__name__)
 
 
 def __read_config_file(path: str) -> List[str]:
-    with open(path) as f:
-        log(f"Read config file {path}")
-        lines = f.readlines()
+    with open(path) as file:
+        __LOGGER.info(f"Read config file {path}")
+        lines = file.readlines()
     return lines
 
 
