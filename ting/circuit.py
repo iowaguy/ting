@@ -27,7 +27,7 @@ from ting.utils import Fingerprint, TingLeg, Port, IPAddress
 TC = TypeVar("TC", bound="TorCircuit")
 
 
-class TorCircuit:  # pylint: too-many-instance-attributes
+class TorCircuit:  # pylint: disable=too-many-instance-attributes
     """A class for building and interacting with Tor circuits."""
 
     __DEFAULT_MAX_BUILD_ATTEMPTS: ClassVar[int] = 5
@@ -36,7 +36,7 @@ class TorCircuit:  # pylint: too-many-instance-attributes
     __SOCKS_TYPE = socks.SOCKS5
     __SOCKS_HOST: ClassVar[IPAddress] = "127.0.0.1"
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         controller: Controller,
         relays: List[Fingerprint],
@@ -45,7 +45,7 @@ class TorCircuit:  # pylint: too-many-instance-attributes
         dest_port: Port,
         event: Event,
         **kwargs: Union[int, str],
-    ) -> None:  # pylint: too-many-arguments
+    ) -> None:
         """
         :param controller This is a
 -        [stem controller][https://stem.torproject.org/api/control.html] object.
@@ -127,8 +127,8 @@ class TorCircuit:  # pylint: too-many-instance-attributes
                     "Closing stream...",
                     circuit_id,
                 )
-                self.__logger.info("\tResponse Code: %s " % str(exc.code))
-                self.__logger.info("\tMessage: %s" % str(exc.message))
+                self.__logger.info("\tResponse Code: %s ", str(exc.code))
+                self.__logger.info("\tMessage: %s", str(exc.message))
                 self.__controller.close_stream(event.id)
 
         # An event listener, called whenever StreamEvent status changes
@@ -136,7 +136,7 @@ class TorCircuit:  # pylint: too-many-instance-attributes
             if event.status == "DETACHED":
                 if circuit_id:
                     self.__logger.warning(
-                        f"Stream Detached from circuit %s...", circuit_id
+                        "Stream Detached from circuit %s...", circuit_id
                     )
                 else:
                     self.__logger.warning("Stream Detached from circuit...")
@@ -145,14 +145,16 @@ class TorCircuit:  # pylint: too-many-instance-attributes
                 attach_stream(event)
 
         self.__probe = probe_stream
-        self.__controller.add_event_listener(probe_stream, EventType.STREAM)
+        self.__controller.add_event_listener(
+            probe_stream, EventType.STREAM  # pylint: disable=no-member
+        )
 
     def __connect_to_dest(self, dest_ip: IPAddress, dest_port: Port) -> None:
         try:
             self.__logger.info("\tTrying to connect to endpoint..")
 
             self.__tor_sock.connect((dest_ip, dest_port))
-            self.__logger.info(
+            self.__logger.info(  # pylint: disable=logging-not-lazy
                 Color.SUCCESS + "\tConnected to endpoint successfully!" + Color.END
             )
         except socket.error as exc:

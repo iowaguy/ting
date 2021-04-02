@@ -1,13 +1,10 @@
 """Logging functions used by Ting."""
 
 import logging
-import os
 import sys
 
-EMAIL_ADDR = None  # set this to your email address to get email notifications
 
-
-class Color:
+class Color:  # pylint: disable=too-few-public-methods
     """Useful color codes."""
 
     HEADER = "\033[95m"
@@ -18,31 +15,7 @@ class Color:
     END = "\033[0m"
 
 
-def success(msg: str) -> None:
-    logging.info(msg)
-
-
-def warning(msg: str) -> None:
-    logging.warning(msg)
-
-
 def failure(msg: str) -> None:
     """Log a critical failure and exit."""
     logging.critical(msg)
     sys.exit(-1)
-
-
-def log(msg: str) -> None:
-    logging.info(msg)
-
-
-def debug(msg: str) -> None:
-    logging.debug(msg)
-
-
-def notify(msg_type: str, msg: str) -> None:
-    """Send email alert."""
-    if EMAIL_ADDR:
-        os.system(
-            "echo '{0}' | mailx -s 'Ting {1}' '{2}'".format(msg, msg_type, EMAIL_ADDR)
-        )

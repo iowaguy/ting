@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""A module for accessing the Ting API from the command line."""
+
 import argparse
 import logging
 from os.path import realpath, dirname
@@ -7,19 +9,20 @@ import signal
 import sys
 from typing import Any, Dict, List
 
-script_dir = dirname(realpath(__file__))
+SCRIPT_DIR = dirname(realpath(__file__))
 
 # This line is required so I can use the ting module
-sys.path.append(script_dir + "/../")
+sys.path.append(SCRIPT_DIR + "/../")
 
-from ting import ting
+# This has to be after I've added ting to the import path
+from ting import ting  # pylint: disable=wrong-import-position
 
 __LOGGER = logging.getLogger(__name__)
 
 
 def __read_config_file(path: str) -> List[str]:
     with open(path) as file:
-        __LOGGER.info(f"Read config file {path}")
+        __LOGGER.info("Read config file %s", path)
         lines = file.readlines()
     return lines
 

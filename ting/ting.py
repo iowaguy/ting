@@ -8,7 +8,7 @@ from ting.client import TingClient
 from ting.utils import Fingerprint, IPAddress, RelayPair, TingLeg
 
 
-def ting(
+def ting(  # pylint: disable=too-many-arguments
     measurement_targets: List[Tuple[Fingerprint, Fingerprint]],
     relay_w_fp: Fingerprint,
     relay_z_fp: Fingerprint,

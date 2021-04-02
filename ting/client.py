@@ -3,6 +3,7 @@
 from datetime import datetime
 import glob
 import json
+import logging
 import os
 import os.path
 from threading import Event, Thread
@@ -12,11 +13,10 @@ import urllib
 from stem.control import Controller
 import stem.descriptor.remote
 
-import ting
 from ting.circuit import TorCircuit, TingCircuit
 from ting.echo_server import EchoServer
 from ting.exceptions import ConnectionAlreadyExistsException
-from ting.logging import failure, success
+from ting.logging import failure
 from ting.utils import Fingerprint, TingLeg, IPAddress, Port
 
 
@@ -39,6 +39,7 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
         local_test: bool = False,
         **kwargs: Union[int, str],
     ) -> None:
+        self.__logger = logging.getLogger(__name__)
         self.__kwargs = kwargs
         self.destination_port = int(
             kwargs.get("DestinationPort", self.__DEFAULT_ECHO_SERVER_PORT)
@@ -93,8 +94,7 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
             raise ConnectionAlreadyExistsException("EchoServer already exists")
         echo_server.run()
 
-    @classmethod
-    def __init_controller(cls, controller_port: Port) -> Controller:
+    def __init_controller(self, controller_port: Port) -> Controller:
 
         controller = Controller.from_port(port=controller_port)
         if not controller:
@@ -103,7 +103,7 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
             controller.authenticate()
         controller.set_conf("__DisablePredictedCircuits", "1")
         controller.set_conf("__LeaveStreamsUnattached", "1")
-        success(f"Controller initialized on port {controller_port}.")
+        self.__logger.info("Controller initialized on port %s.", controller_port)
         return controller
 
     def generate_circuit_templates(
@@ -193,15 +193,16 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
                     (datetime.now() - most_recent_time).seconds
                 )
                 if hours_since_last <= relay_cache_time:
-                    ting.logging.log(
+                    self.__logger.info(
                         "Found list of relays in cache that is "
-                        f"{hours_since_last} hours old. Using that..."
+                        "%d hours old. Using that...",
+                        hours_since_last,
                     )
                     with open(most_recent_list) as file:
                         contents = file.read()
                         data = json.loads(contents)
             if not data:
-                ting.logging.log(
+                self.__logger.info(
                     "Downloading current list of relays.. (this may take a \
                      few seconds)"
                 )
@@ -222,6 +223,6 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
         elif test_relays:
             self.__download_dummy_consensus()
 
-        ting.logging.success(
-            "There are {0} currently running Tor nodes.".format(len(self.fp_to_ip))
+        self.__logger.info(
+            "There are %d currently running Tor nodes.", len(self.fp_to_ip)
         )
