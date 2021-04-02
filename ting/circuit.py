@@ -47,9 +47,9 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
         **kwargs: Union[int, str],
     ) -> None:
         """
-        :param controller This is a
--        [stem controller][https://stem.torproject.org/api/control.html] object.
-        :param relays This is a list of fingerprints of relays to connect to.
+                :param controller This is a
+        -        [stem controller][https://stem.torproject.org/api/control.html] object.
+                :param relays This is a list of fingerprints of relays to connect to.
         """
         self.__logger = logging.getLogger(__name__)
         self.__relays = relays
@@ -166,11 +166,11 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
             if self.__tor_sock:
                 raise ConnectionAlreadyExistsException(
                     "This socket is already connected", exc
-                )
+                ) from exc
 
             raise CircuitConnectionException(
                 "Failed to connect using the given circuit: ", "", exc
-            )
+            ) from exc
 
     # Tell socks to use tor as a proxy
     def __setup_proxy(self) -> socket.socket:
@@ -185,7 +185,7 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
 
         try:
             timer = ting.timer_pb2.Ting()
-            timer.type = ting.timer_pb2.Ting.Packet.TING
+            timer.ptype = ting.timer_pb2.Ting.Packet.TING
             msg = timer.SerializeToString()
             start_time = time.time()
             self.__tor_sock.send(msg)
@@ -208,13 +208,13 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
 
             raise CircuitConnectionException(
                 "Failed to connect using the given circuit: ", "", exc
-            )
+            ) from exc
 
     def close(self) -> None:
         """Close the Tor socket."""
         try:
             timer = ting.timer_pb2.Ting()
-            timer.type = ting.timer_pb2.Ting.Packet.CLOSE
+            timer.ptype = ting.timer_pb2.Ting.Packet.CLOSE
 
             # Tell echo server that this connection is over
             self.__tor_sock.send(timer.SerializeToString())

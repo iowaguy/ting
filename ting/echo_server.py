@@ -45,7 +45,7 @@ class EchoServer:
                     timer = ting.timer_pb2.Ting()
                     timer.ParseFromString(data)
                     self.__logger.debug("Data received: %s", timer)
-                    if not data or timer.type == ting.timer_pb2.Ting.Packet.CLOSE:
+                    if not data or timer.ptype == ting.timer_pb2.Ting.Packet.CLOSE:
                         self.__logger.debug("Client is closing connection.")
                         sock.close()
                         read_list.remove(sock)
@@ -54,7 +54,7 @@ class EchoServer:
 
                     # If we're here, then the client is tinging us
                     timer.Clear()
-                    timer.type = ting.timer_pb2.Ting.Packet.TING
+                    timer.ptype = ting.timer_pb2.Ting.Packet.TING
                     timer.time_sec = time.time()
                     self.__logger.debug("Echoing data: %s", data)
                     sock.send(timer.SerializeToString())

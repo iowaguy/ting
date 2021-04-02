@@ -10,5 +10,5 @@ message Ting {
     TING = 1;
   }
 
-  required Packet type = 2;
+  required Packet ptype = 2;
 }
