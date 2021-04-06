@@ -14,3 +14,4 @@ Exitpolicy accept $MY_PUBLIC_IP:16667,reject *:*
 RunAsDaemon 1
 PublishServerDescriptor 1
 ContactInfo weintraub.b [AT] northeastern [DOT] edu
+Nickname ShorTorGuard
