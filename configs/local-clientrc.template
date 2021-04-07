@@ -1,0 +1,13 @@
+AvoidDiskWrites 1
+ControlPort 8008
+CookieAuthentication 1
+LearnCircuitBuildTimeout 0
+DataDirectory $PWD/data/z
+DirReqStatistics 0
+UseMicroDescriptors 0
+DownloadExtraInfo 1
+Log notice file $PWD/logs/z.log
+SocksPort 9008
+RunAsDaemon 1
+ContactInfo weintraub.b [AT] northeastern [DOT] edu
+Nickname ShorTorClient

@@ -30,3 +30,4 @@ class TorRelayType(Enum):
     GUARD = 0
     MIDDLE = 1
     EXIT = 2
+    CLIENT = 3
