@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-# set -x
-
 project_files=(
   ting/{circuit.py,client.py,echo_server.py,exceptions.py,__init__.py,logging.py,ting.py,utils.py}
   scripts/*.py
