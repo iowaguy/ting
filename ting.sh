@@ -158,7 +158,7 @@ while :; do
         exit 1
       fi
 
-      start
+      start $2 $3
       ;;
     stop)
       stop
