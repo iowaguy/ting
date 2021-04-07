@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+# set -x
+
+project_files=(
+  ting/{circuit.py,client.py,echo_server.py,exceptions.py,__init__.py,logging.py,ting.py,utils.py}
+  scripts/*.py
+)
+
+protoc -I=. --python_out=ting/ --mypy_out=ting/ timer.proto
+
+black --target-version=py37 ${project_files[@]}
+
+pylint --load-plugins=pylint_protobuf --disable=bad-continuation ${project_files[@]}
+
+mypy ${project_files[@]}

@@ -45,6 +45,11 @@ with the local disk. If it is not happening automatically, runner
 ``` shell
 vagrant rsync-auto
 ```
+## Development
+Code can be linted with
+``` shell
+./scripts/lint
+```
 
 ## API Docs
 To generate documentation, install `pdoc`
