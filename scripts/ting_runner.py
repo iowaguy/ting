@@ -40,8 +40,6 @@ def __assemble_configuration_dict(path: str) -> Dict[str, Any]:
         config["InputFile"] = None
 
     arg_overrides = [
-        (args.num_repeats, "NumRepeats"),
-        (args.num_samples, "NumSamples"),
         (args.dest_port, "DestinationPort"),
         (args.input_file, "InputFile"),
         (args.output_file, "ResultsDirectory"),
@@ -90,11 +88,7 @@ if __name__ == "__main__":
         "--num-samples",
         help="number of samples for each circuit (default 10)",
         type=int,
-    )
-    parser.add_argument(
-        "--num-repeats",
-        help="number of times to measure each pair (default 1)",
-        type=int,
+        default=1,
     )
     parser.add_argument(
         "--config-file",
@@ -133,7 +127,7 @@ if __name__ == "__main__":
             configuration["W"],
             configuration["Z"],
             configuration["SourceAddr"],
-            num_samples=10,
+            num_samples=args.num_samples,
             local_test=(configuration["RelayList"] == "test"),
             **configuration,
         )

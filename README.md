@@ -20,8 +20,10 @@
 
    Testing the latency between the two nodes at MIT, it would look like
    ``` shell
-   ./ting.sh start 9695DFC35FFEB861329B9F1AB04C46397020CE31 749EF4A434DFD00DAB31E93DE86233FB916D31E3
+   ./ting.sh start 9715C81BA8C5B0C698882035F75C67D6D643DBE3 A53C46F5B157DD83366D45A8E99A244934A14C46
    ```
+   Note that these particular fingerprints are subject to change. Get up-to-date
+   fingerprints at [Tor Metrics](https://metrics.torproject.org/rs.html).
 
 ## Locally Testing Ting
 

@@ -62,8 +62,6 @@ ControllerPort 8008
 SourceAddr $host
 DestinationAddr $host
 DestinationPort 16667
-NumSamples 10
-NumRepeats 1
 RelayList test
 RelayCacheTime 24
 W ${fingerprint_relay_w}
@@ -104,8 +102,6 @@ ControllerPort 8008
 SourceAddr $host
 DestinationAddr $host
 DestinationPort 16667
-NumSamples 10
-NumRepeats 1
 RelayList internet
 RelayCacheTime 24
 W ${fingerprint_relay_w}
