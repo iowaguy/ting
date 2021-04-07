@@ -4,7 +4,7 @@
    measurements.
    ``` shell
    cd scripts/
-   ./tor-local --guard --exit
+   ./tor-local --guard --exit --client
    ```
 
 2. Run Ting. This can either be done through the API, or the standalone script.

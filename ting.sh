@@ -12,6 +12,7 @@ TING_LOG_LEVEL=WARNING
 TOR_DATA=${SCRIPTS}/data
 TOR_DATA_W=${TOR_DATA}/w
 TOR_DATA_Z=${TOR_DATA}/z
+SAMPLES=1
 
 kill_all() {
   ps -ef | grep "$1" | grep -v grep | awk '{print $2}' | xargs kill -9
@@ -51,7 +52,6 @@ start_test() {
   local fingerprint_relay_x=$(cat ${CHUTNEY_NODES}/004r/fingerprint | awk '{print $2}')
   local fingerprint_relay_y=$(cat ${CHUTNEY_NODES}/005r/fingerprint | awk '{print $2}')
   local fingerprint_relay_z=$(cat ${CHUTNEY_NODES}/006r/fingerprint | awk '{print $2}')
-  # local fingerprint_client=$(cat ${CHUTNEY_NODES}/008c/fingerprint)
 
   local host=$(hostname -i | awk '{print $1}')
 
@@ -71,7 +71,7 @@ MaxCircuitBuildAttempts 5
 EOF
 
   grep DirAuthority ${CHUTNEY_PATH}/net/nodes/000a/torrc >> ./${TING_CONFIG_FILE}
-  ${SCRIPTS}/ting_runner.py --log-level ${TING_LOG_LEVEL} ${fingerprint_relay_x} ${fingerprint_relay_y}
+  ${SCRIPTS}/ting_runner.py --num-samples ${SAMPLES} --log-level ${TING_LOG_LEVEL} ${fingerprint_relay_x} ${fingerprint_relay_y}
 }
 
 stop_test() {
@@ -115,7 +115,7 @@ start() {
   local fingerprint_relay_x=$1
   local fingerprint_relay_y=$2
 
-  ${SCRIPTS}/ting_runner.py --log-level ${TING_LOG_LEVEL} ${fingerprint_relay_x} ${fingerprint_relay_y}
+  ${SCRIPTS}/ting_runner.py --num-samples ${SAMPLES} --log-level ${TING_LOG_LEVEL} ${fingerprint_relay_x} ${fingerprint_relay_y}
 }
 
 stop() {
