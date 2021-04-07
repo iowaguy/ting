@@ -18,4 +18,5 @@ cache/
 /.vagrant/
 /scripts/local-guardrc
 /scripts/local-exitrc
+/scripts/local-clientrc
 **/.mypy_cache/
