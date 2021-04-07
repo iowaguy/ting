@@ -159,9 +159,8 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
             )
         except socket.error as exc:
             self.__logger.warning(
-                "Failed to connect to the endpoint using the given circuit: %s"
+                "Failed to connect to the endpoint using the given circuit."
                 "\nClosing connection.",
-                str(exc),
             )
             if self.__tor_sock:
                 raise ConnectionAlreadyExistsException(
