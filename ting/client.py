@@ -22,6 +22,8 @@ from ting.utils import Fingerprint, TingLeg, IPAddress, Port
 
 Client = TypeVar("Client", bound="TingClient")
 
+logger = logging.getLogger(__name__)
+
 
 class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-attributes
     """A class for managing Ting operations."""
@@ -39,7 +41,6 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
         local_test: bool = False,
         **kwargs: Union[int, str],
     ) -> None:
-        self.__logger = logging.getLogger(__name__)
         self.__kwargs = kwargs
         self.destination_port = int(
             kwargs.get("DestinationPort", self.__DEFAULT_ECHO_SERVER_PORT)
@@ -103,7 +104,7 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
             controller.authenticate()
         controller.set_conf("__DisablePredictedCircuits", "1")
         controller.set_conf("__LeaveStreamsUnattached", "1")
-        self.__logger.info("Controller initialized on port %s.", controller_port)
+        logger.info("Controller initialized on port %s.", controller_port)
         return controller
 
     def generate_circuit_templates(
@@ -193,7 +194,7 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
                     (datetime.now() - most_recent_time).seconds
                 )
                 if hours_since_last <= relay_cache_time:
-                    self.__logger.info(
+                    logger.info(
                         "Found list of relays in cache that is "
                         "%d hours old. Using that...",
                         hours_since_last,
@@ -202,7 +203,7 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
                         contents = file.read()
                         data = json.loads(contents)
             if not data:
-                self.__logger.info(
+                logger.info(
                     "Downloading current list of relays.. (this may take a \
                      few seconds)"
                 )
@@ -223,6 +224,4 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
         elif test_relays:
             self.__download_dummy_consensus()
 
-        self.__logger.info(
-            "There are %d currently running Tor nodes.", len(self.fp_to_ip)
-        )
+        logger.info("There are %d currently running Tor nodes.", len(self.fp_to_ip))
