@@ -26,6 +26,7 @@ sudo apt-get install -y\
      python3-networkx\
      python3-scipy\
      python3-pip\
+     python-is-python3\
      dstat\
      git\
      htop\
