@@ -31,14 +31,12 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
     __DEFAULT_CONTROLLER_PORT: ClassVar[Port] = 8008
     __DEFAULT_ECHO_SERVER_PORT: ClassVar[Port] = 16667
     __DEFAULT_ECHO_SERVER_IP: ClassVar[IPAddress] = "127.0.0.1"
-    __DEFAULT_RELAY_CACHE_TIME: ClassVar[int] = 24  # hours
 
     def __init__(
         self,
         relay_w_fp: Fingerprint,
         relay_z_fp: Fingerprint,
         local_ip: IPAddress,
-        local_test: bool = False,
         **kwargs: Union[int, str],
     ) -> None:
         self.__kwargs = kwargs
@@ -53,14 +51,6 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
 
         self.w_fp = relay_w_fp
         self.z_fp = relay_z_fp
-        relay_cache_time = int(
-            kwargs.get("RelayCacheTime", self.__DEFAULT_RELAY_CACHE_TIME)
-        )
-
-        self.__parse_relay_list(local_test, relay_cache_time)
-
-        self.relay_list: Dict[IPAddress, Fingerprint]
-        self.fp_to_ip: Dict[Fingerprint, IPAddress]
         controller_port = int(
             kwargs.get("ControllerPort", self.__DEFAULT_CONTROLLER_PORT)
         )
@@ -150,78 +140,3 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
                 **self.__kwargs,
             ),
         )
-
-    def __download_dummy_consensus(self) -> None:
-        self.relay_list = {}
-        self.fp_to_ip = {}
-        for descriptor in stem.descriptor.remote.get_consensus(
-            endpoints=(stem.ORPort("127.0.0.1", 5000),)
-        ):
-            self.fp_to_ip[
-                descriptor.fingerprint.encode("ascii", "ignore")
-            ] = "127.0.0.1"
-
-    def __load_consensus(self, data: Dict[str, Any]) -> None:
-        self.relay_list = {}
-        self.fp_to_ip = {}
-        for relay in data["relays"]:
-            if "or_addresses" in relay:
-                ip_address = relay["or_addresses"][0].split(":")[0]
-                self.relay_list[ip_address] = relay["fingerprint"].encode(
-                    "ascii", "ignore"
-                )
-                self.fp_to_ip[
-                    relay["fingerprint"].encode("ascii", "ignore")
-                ] = ip_address
-
-    @classmethod
-    def __seconds_to_hours(cls, seconds: int) -> float:
-        return seconds / 3600
-
-    def __parse_relay_list(
-        self, test_relays: bool = False, relay_cache_time: int = 24
-    ) -> None:
-        data = None
-        if not test_relays:
-            if os.path.exists("./cache") and len(os.listdir("./cache")) > 0:
-                most_recent_list = min(
-                    glob.iglob("./cache/*.json"), key=os.path.getctime
-                )
-                most_recent_time = datetime.strptime(
-                    most_recent_list, "./cache/relays-%y-%m-%d-%H.json"
-                )
-                hours_since_last = self.__seconds_to_hours(
-                    (datetime.now() - most_recent_time).seconds
-                )
-                if hours_since_last <= relay_cache_time:
-                    logger.info(
-                        "Found list of relays in cache that is "
-                        "%d hours old. Using that...",
-                        hours_since_last,
-                    )
-                    with open(most_recent_list) as file:
-                        contents = file.read()
-                        data = json.loads(contents)
-            if not data:
-                logger.info(
-                    "Downloading current list of relays.. (this may take a \
-                     few seconds)"
-                )
-                data = json.load(
-                    urllib.request.urlopen(  # type: ignore
-                        "https://onionoo.torproject.org/details?type=relay&"
-                        "running=true&fields=nickname,fingerprint,or_addresses"
-                    )
-                )
-                new_cache_file = datetime.now().strftime(
-                    "./cache/relays-%y-%m-%d-%H.json"
-                )
-                if not os.path.exists("./cache"):
-                    os.mkdir("./cache")
-                with open(new_cache_file, "w") as file:
-                    file.write(json.dumps(data))
-            self.__load_consensus(data)
-        elif test_relays:
-            self.__download_dummy_consensus()
-
-        logger.info("There are %d currently running Tor nodes.", len(self.fp_to_ip))

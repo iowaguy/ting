@@ -14,14 +14,11 @@ def ting(  # pylint: disable=too-many-arguments
     relay_z_fp: Fingerprint,
     source_addr: IPAddress = "127.0.0.1",
     num_samples: int = 10,
-    local_test: bool = False,
     **kwargs: Union[str, int],
 ) -> Dict[RelayPair, Dict[TingLeg, List[Tuple[float, float]]]]:
     """A high-level interface for Ting."""
 
-    with TingClient(
-        relay_w_fp, relay_z_fp, source_addr, local_test, **kwargs
-    ) as ting_client:
+    with TingClient(relay_w_fp, relay_z_fp, source_addr, **kwargs) as ting_client:
         results: Dict[RelayPair, Dict[TingLeg, List[Tuple[float, float]]]] = dict()
         logging.info("Measure RTT between the following nodes: %s", measurement_targets)
         for relay1, relay2 in measurement_targets:

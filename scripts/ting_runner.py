@@ -128,7 +128,6 @@ if __name__ == "__main__":
             configuration["Z"],
             configuration["SourceAddr"],
             num_samples=args.num_samples,
-            local_test=(configuration["RelayList"] == "test"),
             **configuration,
         )
     )
