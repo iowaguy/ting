@@ -3,8 +3,7 @@
 import logging
 import socket
 import time
-from threading import Event
-from typing import Any, Callable, ClassVar, List, Tuple, TypeVar, Union
+from typing import Any, Callable, ClassVar, List, Tuple, TypeVar, Union, Optional
 
 from stem import (
     OperationFailed,
@@ -43,7 +42,6 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
         leg: TingLeg,
         dest_ip: IPAddress,
         dest_port: Port,
-        event: Event,
         **kwargs: Union[int, str],
     ) -> None:
         """
@@ -55,7 +53,7 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
         self.__relays = relays
         self.__ting_leg = leg
         self.__tor_sock: socket.socket = socket.socket()
-        self.__circuit_id: int
+        self.__circuit_id: Optional[int] = None
         self.__dest_ip = dest_ip
         self.__dest_port = dest_port
 
@@ -69,7 +67,6 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
         self.__controller = controller
         self.__probe: Callable[[Any], Any]
         self.__build_time: float = 0.0
-        self.__event = event
 
     def __exit__(self, exc_type: Exception, exc_value: str, exc_traceback: str) -> None:
         self.close()
@@ -222,9 +219,6 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
             self.__controller.close_circuit(self.__circuit_id)
             self.__controller.remove_event_listener(self.__probe)
             self.__controller = None
-
-            self.__logger.debug("Shutting down Tor socket")
-            self.__tor_sock.shutdown(socket.SHUT_RDWR)
         except TorShutdownException:
             self.__logger.info(
                 "There was an issue shutting down Tor, but it probably doesn't matter."

@@ -1,17 +1,10 @@
 """Ting client definition."""
 
-from datetime import datetime
-import glob
-import json
 import logging
-import os
-import os.path
-from threading import Event, Thread
-from typing import Any, ClassVar, Dict, TypeVar, Union
-import urllib
+from threading import Thread, Event
+from typing import ClassVar, TypeVar, Union
 
 from stem.control import Controller
-import stem.descriptor.remote
 
 from ting.circuit import TorCircuit, TingCircuit
 from ting.echo_server import EchoServer
@@ -63,27 +56,26 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
                 "public, static IP?"
             )
 
-        self.__measurement_event = Event()
+        self.__echo_server_shutdown = Event()
         self.__echo_server_thread = Thread(
             target=self.__start_echo_server,
-            args=(self.__measurement_event,),
+            args=(self.__echo_server_shutdown,),
             daemon=True,
         )
-
-    def __exit__(self, exc_type: Exception, exc_value: str, exc_traceback: str) -> None:
-        self.__measurement_event.set()
-        self.__echo_server_thread.join()
 
     def __enter__(self: Client) -> Client:
         self.__echo_server_thread.start()
         return self
 
+    def __exit__(self, exc_type: Exception, exc_value: str, exc_traceback: str) -> None:
+        self.__echo_server_shutdown.set()
+        self.__echo_server_thread.join()
+
     @classmethod
-    def __start_echo_server(cls, event: Event) -> None:
-        echo_server = EchoServer(event)
-        if echo_server.is_running():
-            raise ConnectionAlreadyExistsException("EchoServer already exists")
-        echo_server.run()
+    def __start_echo_server(cls, shutdown: Event) -> None:
+        with EchoServer() as echo_server:
+            while not shutdown.is_set():
+                echo_server.serve_one()
 
     def __init_controller(self, controller_port: Port) -> Controller:
 
@@ -118,7 +110,6 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
                 TingLeg.X,
                 self.destination_addr,
                 self.destination_port,
-                self.__measurement_event,
                 **self.__kwargs,
             ),
             TorCircuit(
@@ -127,7 +118,6 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
                 TingLeg.Y,
                 self.destination_addr,
                 self.destination_port,
-                self.__measurement_event,
                 **self.__kwargs,
             ),
             TorCircuit(
@@ -136,7 +126,6 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
                 TingLeg.XY,
                 self.destination_addr,
                 self.destination_port,
-                self.__measurement_event,
                 **self.__kwargs,
             ),
         )
