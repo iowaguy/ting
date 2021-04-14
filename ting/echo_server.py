@@ -11,6 +11,8 @@ import time
 import ting.timer_pb2
 from ting.utils import IPAddress, Port
 
+logger = logging.getLogger(__name__)
+
 
 class EchoServer:
     """A simple echo server for Ting to contact."""
@@ -21,7 +23,6 @@ class EchoServer:
     def __init__(
         self, event: Event, host: IPAddress = "0.0.0.0", port: Port = 16667
     ) -> None:
-        self.__logger = logging.getLogger(__name__)
         self.echo_socket = self.__setup_socket(host, port)
         self.running = False
         self.__event = event
@@ -34,29 +35,29 @@ class EchoServer:
             if self.__event.is_set():
                 return
             readable, _, _ = select.select(read_list, [], [], EchoServer.__TIMEOUT)
-            self.__logger.debug("Socket is ready to read")
+            logger.debug("Socket is ready to read")
             for sock in readable:
                 if sock is self.echo_socket:
                     client_socket, address = self.echo_socket.accept()
                     read_list.append(client_socket)
-                    self.__logger.info("Connection accepted from %s", str(address))
+                    logger.info("Connection accepted from %s", str(address))
                 else:
                     data = sock.recv(EchoServer.__MESSAGE_SIZE)
                     timer = ting.timer_pb2.Ting()
                     timer.ParseFromString(data)
-                    self.__logger.debug("Data received: %s", timer)
+                    logger.debug("Data received: %s", timer)
                     if not data or timer.ptype == ting.timer_pb2.Ting.Packet.CLOSE:
-                        self.__logger.debug("Client is closing connection.")
+                        logger.debug("Client is closing connection.")
                         sock.close()
                         read_list.remove(sock)
-                        self.__logger.info("Connection closed.")
+                        logger.info("Connection closed.")
                         continue
 
                     # If we're here, then the client is tinging us
                     timer.Clear()
                     timer.ptype = ting.timer_pb2.Ting.Packet.TING
                     timer.time_sec = time.time()
-                    self.__logger.debug("Echoing data: %s", data)
+                    logger.debug("Echoing data: %s", data)
                     sock.send(timer.SerializeToString())
 
     def is_running(self) -> bool:
@@ -70,5 +71,11 @@ class EchoServer:
 
         backlog = 1
         sock.listen(backlog)
-        self.__logger.info("TCP echo server listening on port %i", port)
+        logger.info("TCP echo server listening on port %i", port)
         return sock
+
+
+if __name__ == "__main__":
+    echo_server = EchoServer()
+    if not echo_server.is_running():
+        echo_server.run()
