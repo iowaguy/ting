@@ -2,7 +2,7 @@
 
 import logging
 from threading import Thread, Event
-from typing import ClassVar, TypeVar, Union
+from typing import ClassVar, TypeVar, Union, Optional
 
 from stem.control import Controller
 
@@ -17,8 +17,12 @@ Client = TypeVar("Client", bound="TingClient")
 
 logger = logging.getLogger(__name__)
 
+_DEFAULT_CONTROLLER_PORT = 8008
 
-def _init_controller(controller_port: Port) -> Controller:
+
+def init_controller(controller_port: Optional[Port] = None) -> Controller:
+    if not controller_port:
+        controller_port = _DEFAULT_CONTROLLER_PORT
     controller = Controller.from_port(port=controller_port)
     if not controller:
         failure("Couldn't connect to Tor, Controller.from_port failed")
@@ -32,8 +36,6 @@ def _init_controller(controller_port: Port) -> Controller:
 
 class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-attributes
     """A class for managing Ting operations."""
-
-    __DEFAULT_CONTROLLER_PORT: ClassVar[Port] = 8008
 
     def __init__(
         self,
@@ -50,27 +52,6 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
         self.w_fp = relay_w_fp
         self.z_fp = relay_z_fp
         self.__controller = controller
-
-    @classmethod
-    def with_controller(
-        cls,
-        relay_w_fp: Fingerprint,
-        relay_z_fp: Fingerprint,
-        local_ip: IPAddress,
-        echo_server: Endpoint,
-        **kwargs,
-    ) -> Client:
-        controller_port = int(
-            kwargs.get("ControllerPort", cls.__DEFAULT_CONTROLLER_PORT)
-        )
-        try:
-            controller = _init_controller(controller_port)
-        except ConnectionRefusedError:
-            failure(
-                "Could not download consensus. Do this machine have a"
-                "public, static IP?"
-            )
-        return cls(relay_w_fp, relay_z_fp, local_ip, echo_server, controller, **kwargs)
 
     def generate_circuit_templates(
         self, relay1: Fingerprint, relay2: Fingerprint
