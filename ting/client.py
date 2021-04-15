@@ -10,7 +10,7 @@ from ting.circuit import TorCircuit, TingCircuit
 from ting.echo_server import EchoServer
 from ting.exceptions import ConnectionAlreadyExistsException
 from ting.logging import failure
-from ting.utils import Fingerprint, TingLeg, IPAddress, Port
+from ting.utils import Fingerprint, TingLeg, IPAddress, Port, Endpoint
 
 
 Client = TypeVar("Client", bound="TingClient")
@@ -22,25 +22,19 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
     """A class for managing Ting operations."""
 
     __DEFAULT_CONTROLLER_PORT: ClassVar[Port] = 8008
-    __DEFAULT_ECHO_SERVER_PORT: ClassVar[Port] = 16667
-    __DEFAULT_ECHO_SERVER_IP: ClassVar[IPAddress] = "127.0.0.1"
 
     def __init__(
         self,
         relay_w_fp: Fingerprint,
         relay_z_fp: Fingerprint,
         local_ip: IPAddress,
+        echo_server: Endpoint,
         **kwargs: Union[int, str],
     ) -> None:
         self.__kwargs = kwargs
-        self.destination_port = int(
-            kwargs.get("DestinationPort", self.__DEFAULT_ECHO_SERVER_PORT)
-        )
+        self.echo_server = echo_server
 
         self.source_addr = local_ip
-        self.destination_addr = str(
-            kwargs.get("DestinationAddr", self.__DEFAULT_ECHO_SERVER_IP)
-        )
 
         self.w_fp = relay_w_fp
         self.z_fp = relay_z_fp
@@ -55,27 +49,6 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
                 "Could not download consensus. Do this machine have a"
                 "public, static IP?"
             )
-
-        self.__echo_server_shutdown = Event()
-        self.__echo_server_thread = Thread(
-            target=self.__start_echo_server,
-            args=(self.__echo_server_shutdown,),
-            daemon=True,
-        )
-
-    def __enter__(self: Client) -> Client:
-        self.__echo_server_thread.start()
-        return self
-
-    def __exit__(self, exc_type: Exception, exc_value: str, exc_traceback: str) -> None:
-        self.__echo_server_shutdown.set()
-        self.__echo_server_thread.join()
-
-    @classmethod
-    def __start_echo_server(cls, shutdown: Event) -> None:
-        with EchoServer() as echo_server:
-            while not shutdown.is_set():
-                echo_server.serve_one()
 
     def __init_controller(self, controller_port: Port) -> Controller:
 
@@ -108,24 +81,21 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
                 self.__controller,
                 x_circ,
                 TingLeg.X,
-                self.destination_addr,
-                self.destination_port,
+                self.echo_server,
                 **self.__kwargs,
             ),
             TorCircuit(
                 self.__controller,
                 y_circ,
                 TingLeg.Y,
-                self.destination_addr,
-                self.destination_port,
+                self.echo_server,
                 **self.__kwargs,
             ),
             TorCircuit(
                 self.__controller,
                 xy_circ,
                 TingLeg.XY,
-                self.destination_addr,
-                self.destination_port,
+                self.echo_server,
                 **self.__kwargs,
             ),
         )

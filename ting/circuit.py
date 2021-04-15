@@ -3,7 +3,17 @@
 import logging
 import socket
 import time
-from typing import Any, Callable, ClassVar, List, Tuple, TypeVar, Union, Optional
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    List,
+    Tuple,
+    TypeVar,
+    Union,
+    Optional,
+    Iterator,
+)
 
 from stem import (
     OperationFailed,
@@ -21,7 +31,7 @@ from ting.exceptions import (
 )
 from ting.logging import Color
 import ting.timer_pb2
-from ting.utils import Fingerprint, TingLeg, Port, IPAddress
+from ting.utils import Fingerprint, TingLeg, Port, IPAddress, Endpoint
 
 TC = TypeVar("TC", bound="TorCircuit")
 
@@ -40,8 +50,7 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
         controller: Controller,
         relays: List[Fingerprint],
         leg: TingLeg,
-        dest_ip: IPAddress,
-        dest_port: Port,
+        dest: Endpoint,
         **kwargs: Union[int, str],
     ) -> None:
         """
@@ -54,8 +63,7 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
         self.__ting_leg = leg
         self.__tor_sock: socket.socket = socket.socket()
         self.__circuit_id: Optional[int] = None
-        self.__dest_ip = dest_ip
-        self.__dest_port = dest_port
+        self.__dest = dest
 
         self.__max_circuit_build_attempts = int(
             kwargs.get("MaxCircuitBuildAttempts", self.__DEFAULT_MAX_BUILD_ATTEMPTS)
@@ -98,7 +106,7 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
                 self.__logger.info("SOCKS proxy setup complete.")
 
                 self.__build_time = round(end_build - start_build, 5)
-                self.__connect_to_dest(self.__dest_ip, self.__dest_port)
+                self.__connect_to_dest()
                 return self
 
             except (InvalidRequest, CircuitExtensionFailed) as exc:
@@ -146,11 +154,11 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
             probe_stream, EventType.STREAM  # pylint: disable=no-member
         )
 
-    def __connect_to_dest(self, dest_ip: IPAddress, dest_port: Port) -> None:
+    def __connect_to_dest(self) -> None:
         try:
             self.__logger.info("\tTrying to connect to endpoint..")
 
-            self.__tor_sock.connect((dest_ip, dest_port))
+            self.__tor_sock.connect((self.__dest.host, self.__dest.port))
             self.__logger.info(  # pylint: disable=logging-not-lazy
                 Color.SUCCESS + "\tConnected to endpoint successfully!" + Color.END
             )
@@ -270,7 +278,6 @@ class TingCircuit:
         """Getter method for circuit xy."""
         return self.__xy_circ
 
-    @property
-    def all(self) -> Tuple[TorCircuit, TorCircuit, TorCircuit]:
+    def __iter__(self) -> Iterator[TorCircuit]:
         """Returns all legs of the Tor measurement."""
-        return (self.__x_circ, self.__y_circ, self.__xy_circ)
+        return iter((self.__x_circ, self.__y_circ, self.__xy_circ))
