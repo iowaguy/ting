@@ -4,15 +4,20 @@
 
 import logging
 import time
+import errno
+import random
 
 from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR, timeout
 from threading import Event, Thread
 from contextlib import contextmanager
+from typing import Optional
 
 import ting.timer_pb2
 from ting.utils import IPAddress, Port, Endpoint
 
 logger = logging.getLogger(__name__)
+
+_PORT_RANGE = range(16000, 17000)
 
 
 class EchoServer:
@@ -78,9 +83,9 @@ class EchoServer:
 
 
 @contextmanager
-def echo_server_background():
+def _echo_server_background_inner(endpoint: Endpoint):
     shutdown = Event()
-    with EchoServer() as echo_server:
+    with EchoServer(endpoint) as echo_server:
         try:
             thread = Thread(target=echo_server.serve_with_shutdown, args=(shutdown,))
             thread.start()
@@ -88,6 +93,21 @@ def echo_server_background():
         finally:
             shutdown.set()
             thread.join()
+
+
+@contextmanager
+def echo_server_background(host: IPAddress = "127.0.0.1"):
+    while True:
+        port = Port(random.randint(_PORT_RANGE.start, _PORT_RANGE.stop))
+        endpoint = Endpoint(host, port)
+        try:
+            with _echo_server_background_inner(endpoint) as e:
+                yield e
+        except OSError as exc:
+            if exc.errno == errno.EADDRINUSE:
+                continue
+            raise
+        return
 
 
 if __name__ == "__main__":
