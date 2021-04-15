@@ -22,7 +22,7 @@ def ting(  # pylint: disable=too-many-arguments
     """A high-level interface for Ting."""
 
     with echo_server_background() as echo_server:
-        ting_client = TingClient(
+        ting_client = TingClient.with_controller(
             relay_w_fp, relay_z_fp, source_addr, echo_server, **kwargs
         )
         results: Dict[RelayPair, Dict[TingLeg, List[Tuple[float, float]]]] = dict()

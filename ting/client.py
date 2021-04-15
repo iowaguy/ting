@@ -18,6 +18,18 @@ Client = TypeVar("Client", bound="TingClient")
 logger = logging.getLogger(__name__)
 
 
+def _init_controller(controller_port: Port) -> Controller:
+    controller = Controller.from_port(port=controller_port)
+    if not controller:
+        failure("Couldn't connect to Tor, Controller.from_port failed")
+    if not controller.is_authenticated():
+        controller.authenticate()
+    controller.set_conf("__DisablePredictedCircuits", "1")
+    controller.set_conf("__LeaveStreamsUnattached", "1")
+    logger.info("Controller initialized on port %s.", controller_port)
+    return controller
+
+
 class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-attributes
     """A class for managing Ting operations."""
 
@@ -29,38 +41,36 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
         relay_z_fp: Fingerprint,
         local_ip: IPAddress,
         echo_server: Endpoint,
+        controller: Controller,
         **kwargs: Union[int, str],
     ) -> None:
         self.__kwargs = kwargs
         self.echo_server = echo_server
-
         self.source_addr = local_ip
-
         self.w_fp = relay_w_fp
         self.z_fp = relay_z_fp
-        controller_port = int(
-            kwargs.get("ControllerPort", self.__DEFAULT_CONTROLLER_PORT)
-        )
+        self.__controller = controller
 
+    @classmethod
+    def with_controller(
+        cls,
+        relay_w_fp: Fingerprint,
+        relay_z_fp: Fingerprint,
+        local_ip: IPAddress,
+        echo_server: Endpoint,
+        **kwargs,
+    ) -> Client:
+        controller_port = int(
+            kwargs.get("ControllerPort", cls.__DEFAULT_CONTROLLER_PORT)
+        )
         try:
-            self.__controller = self.__init_controller(controller_port)
+            controller = _init_controller(controller_port)
         except ConnectionRefusedError:
             failure(
                 "Could not download consensus. Do this machine have a"
                 "public, static IP?"
             )
-
-    def __init_controller(self, controller_port: Port) -> Controller:
-
-        controller = Controller.from_port(port=controller_port)
-        if not controller:
-            failure("Couldn't connect to Tor, Controller.from_port failed")
-        if not controller.is_authenticated():
-            controller.authenticate()
-        controller.set_conf("__DisablePredictedCircuits", "1")
-        controller.set_conf("__LeaveStreamsUnattached", "1")
-        logger.info("Controller initialized on port %s.", controller_port)
-        return controller
+        return cls(relay_w_fp, relay_z_fp, local_ip, echo_server, controller, **kwargs)
 
     def generate_circuit_templates(
         self, relay1: Fingerprint, relay2: Fingerprint
@@ -71,7 +81,6 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
 
         :return An object holding the three unbuilt circuits.
         """
-
         x_circ = [self.w_fp, relay1, self.z_fp]
         y_circ = [self.w_fp, relay2, self.z_fp]
         xy_circ = [self.w_fp, relay1, relay2, self.z_fp]
