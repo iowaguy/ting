@@ -83,9 +83,7 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
         return self.build()
 
     def build(self: TC) -> TC:
-        """Build the circuit.
-
-        :return Time to build the circuit in milliseconds."""
+        """Build the circuit."""
         cid, failures = None, 0
 
         last_exception: Exception

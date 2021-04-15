@@ -34,10 +34,7 @@
 ./ting.sh stop_test
 ```
 
-The `RelayList` parameter can be either `internet` or `test`. If `internet` is
-used, the consensus will be downloaded from directory authorities of the
-_actual_ Tor network. If `test` is supplied, a local directory authority will be
-used.
+The directory authorities used are given by the `DirAuthority` setting in the `tingrc`.
 
 During development and testing, it can be useful to have vagrant stay in sync
 with the local disk. If it is not happening automatically, runner
