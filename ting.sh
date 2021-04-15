@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -x
 
 CHUTNEY_BASE=${HOME}
 CHUTNEY_PATH=${CHUTNEY_BASE}/chutney
@@ -62,12 +63,8 @@ ControllerPort 8008
 SourceAddr $host
 DestinationAddr $host
 DestinationPort 16667
-RelayList test
-RelayCacheTime 24
 W ${fingerprint_relay_w}
 Z ${fingerprint_relay_z}
-SocksTimeout 60
-MaxCircuitBuildAttempts 5
 EOF
 
   grep DirAuthority ${CHUTNEY_PATH}/net/nodes/000a/torrc >> ./${TING_CONFIG_FILE}
@@ -102,12 +99,8 @@ ControllerPort 8008
 SourceAddr $host
 DestinationAddr $host
 DestinationPort 16667
-RelayList internet
-RelayCacheTime 24
 W ${fingerprint_relay_w}
 Z ${fingerprint_relay_z}
-SocksTimeout 60
-MaxCircuitBuildAttempts 5
 EOF
 }
 

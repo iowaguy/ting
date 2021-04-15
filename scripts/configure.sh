@@ -101,13 +101,9 @@ FP_C=$(cat ./tor/data/client/fingerprint | cut -f2 -d" ")
 # DestinationPort 16667
 # NumSamples 200
 # NumRepeats 1
-# RelayList internet
-# RelayCacheTime 24
 # W $MY_PUBLIC_IP,$FP_W
 # Z $MY_PUBLIC_IP,$FP_Z
 # C $MY_PUBLIC_IP,$FP_C
-# SocksTimeout 60
-# MaxCircuitBuildAttempts 5
 # EOF
 
 # Generate default tingrc file
@@ -119,13 +115,9 @@ DestinationAddr $MY_PUBLIC_IP
 DestinationPort 16667
 NumSamples 200
 NumRepeats 1
-RelayList internet
-RelayCacheTime 24
 W moria.csail.mit.edu,9695DFC35FFEB861329B9F1AB04C46397020CE31
 Z 46.165.245.154,749EF4A434DFD00DAB31E93DE86233FB916D31E3
 C $MY_PUBLIC_IP,$FP_C
-SocksTimeout 60
-MaxCircuitBuildAttempts 5
 EOF
 
 
