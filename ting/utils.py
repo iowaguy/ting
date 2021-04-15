@@ -1,19 +1,27 @@
 """A series of utility functions and classes for Ting."""
 
 from enum import Enum
-from typing import Tuple
+from typing import Tuple, NewType
+from dataclasses import dataclass
 
-Fingerprint = str
+Fingerprint = NewType("Fingerprint", str)
 """A Tor fingerprint"""
 
-IPAddress = str
+IPAddress = NewType("IPAddress", str)
 """An IP address"""
 
-Port = int
+Port = NewType("Port", int)
 """A port number"""
+
 
 RelayPair = Tuple[Fingerprint, Fingerprint]
 """A pair of Tor relays"""
+
+
+@dataclass(frozen=True)
+class Endpoint:
+    host: IPAddress
+    port: Port
 
 
 class TingLeg(Enum):
