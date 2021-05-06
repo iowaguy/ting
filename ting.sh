@@ -60,7 +60,6 @@ start_test() {
   cat <<EOF > ./${TING_CONFIG_FILE}
 SocksPort 9008
 ControllerPort 8008
-SourceAddr $host
 DestinationAddr $host
 DestinationPort 16667
 W ${fingerprint_relay_w}
@@ -96,7 +95,6 @@ configure() {
   cat <<EOF > ./${TING_CONFIG_FILE}
 SocksPort 9008
 ControllerPort 8008
-SourceAddr $host
 DestinationAddr $host
 DestinationPort 16667
 W ${fingerprint_relay_w}

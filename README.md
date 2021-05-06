@@ -173,9 +173,6 @@ ControllerPort    controller port exposed by Tor client that allows stem to talk
 SocksPort         port exposed by the Tor client that allows us to
                   default: 9050
 
-SourceAddr        address of this machine, stored in results file simply for
-                  record-keeping purposes, default: public address of this machine
-
 DestinationAddr   address of echo server, default: public address of this machine
 
 DestinationPort   port of echo server, default: 16667

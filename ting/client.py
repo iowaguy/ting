@@ -41,14 +41,12 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
         self,
         relay_w_fp: Fingerprint,
         relay_z_fp: Fingerprint,
-        local_ip: IPAddress,
         echo_server: Endpoint,
         controller: Controller,
         **kwargs: Union[int, str],
     ) -> None:
         self.__kwargs = kwargs
         self.echo_server = echo_server
-        self.source_addr = local_ip
         self.w_fp = relay_w_fp
         self.z_fp = relay_z_fp
         self.__controller = controller

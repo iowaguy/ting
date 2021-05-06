@@ -96,7 +96,6 @@ FP_C=$(cat ./tor/data/client/fingerprint | cut -f2 -d" ")
 # cat <<EOF > ./tingrc
 # SocksPort 9050
 # ControllerPort 9051
-# SourceAddr $MY_PUBLIC_IP
 # DestinationAddr $MY_PUBLIC_IP
 # DestinationPort 16667
 # NumSamples 200
@@ -110,7 +109,6 @@ FP_C=$(cat ./tor/data/client/fingerprint | cut -f2 -d" ")
 cat <<EOF > ./tingrc
 SocksPort 9050
 ControllerPort 9051
-SourceAddr $MY_PUBLIC_IP
 DestinationAddr $MY_PUBLIC_IP
 DestinationPort 16667
 NumSamples 200

@@ -16,7 +16,6 @@ def ting(  # pylint: disable=too-many-arguments
     measurement_targets: List[Tuple[Fingerprint, Fingerprint]],
     relay_w_fp: Fingerprint,
     relay_z_fp: Fingerprint,
-    source_addr: IPAddress = "127.0.0.1",
     num_samples: int = 10,
     **kwargs: Union[str, int],
 ) -> Dict[RelayPair, Dict[TingLeg, List[Tuple[float, float]]]]:
@@ -28,7 +27,7 @@ def ting(  # pylint: disable=too-many-arguments
         except ConnectionRefusedError:
             failure("Could not connect to controller.")
         ting_client = TingClient(
-            relay_w_fp, relay_z_fp, source_addr, echo_server, controller, **kwargs
+            relay_w_fp, relay_z_fp, echo_server, controller, **kwargs
         )
         results: Dict[RelayPair, Dict[TingLeg, List[Tuple[float, float]]]] = dict()
         logging.info("Measure RTT between the following nodes: %s", measurement_targets)

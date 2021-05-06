@@ -126,7 +126,6 @@ if __name__ == "__main__":
             [(args.relay1, args.relay2)],
             configuration["W"],
             configuration["Z"],
-            configuration["SourceAddr"],
             num_samples=args.num_samples,
             **configuration,
         )
