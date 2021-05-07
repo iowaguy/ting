@@ -3,6 +3,7 @@
 import logging
 import socket
 import time
+import textwrap
 from typing import (
     Any,
     Callable,
@@ -242,7 +243,7 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
         return self.__relays
 
     @property
-    def circuit_id(self) -> int:
+    def circuit_id(self) -> Optional[int]:
         """Get the circuit ID. If circuit has not been built, returns None."""
         return self.__circuit_id
 
@@ -251,6 +252,9 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
         """Returns the time taken to build the circuit. None if circuit has not
         been built yet."""
         return self.__build_time
+
+    def __str__(self) -> str:
+        return f"TorCircuit(relays={self.__relays}, leg={self.__ting_leg}, dest={self.__dest})"
 
 
 class TingCircuit:
@@ -279,3 +283,13 @@ class TingCircuit:
     def __iter__(self) -> Iterator[TorCircuit]:
         """Returns all legs of the Tor measurement."""
         return iter((self.__x_circ, self.__y_circ, self.__xy_circ))
+
+    def __str__(self) -> str:
+        return textwrap.dedent(
+            f"""\
+          TingCircuit(
+              x ={self.__x_circ},
+              y ={self.__y_circ},
+              xy={self.__xy_circ}"
+          )"""
+        )

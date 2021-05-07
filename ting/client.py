@@ -1,6 +1,7 @@
 """Ting client definition."""
 
 import logging
+import textwrap
 from threading import Thread, Event
 from typing import ClassVar, TypeVar, Union, Optional
 
@@ -86,4 +87,14 @@ class TingClient:  # pylint: disable=too-few-public-methods, too-many-instance-a
                 self.echo_server,
                 **self.__kwargs,
             ),
+        )
+
+    def __str__(self) -> str:
+        return textwrap.dedent(
+            f"""\
+           TingClient(
+               w_fp={self.w_fp},
+               z_fp={self.z_fp},
+               echo_server={self.echo_server},
+           )"""
         )
