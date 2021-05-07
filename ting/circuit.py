@@ -16,12 +16,14 @@ from typing import (
     Iterator,
 )
 
+import stem
 from stem import (
     OperationFailed,
     InvalidRequest,
     CircuitExtensionFailed,
 )
 from stem.control import Controller, EventType
+from stem.response.events import StreamEvent
 
 import socks
 
@@ -92,6 +94,7 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
             try:
                 self.__logger.info("Building circuit...")
                 start_build = time.time()
+                self.__controller.set_conf("__LeaveStreamsUnattached", "1")
                 cid = self.__controller.new_circuit(self.relays, await_build=True)
                 self.__circuit_id = cid
                 end_build = time.time()
@@ -122,7 +125,7 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
 
     def __configure_listeners(self, circuit_id: int) -> None:
         # Attaches a specific circuit to the given stream (event)
-        def attach_stream(event: EventType) -> None:
+        def attach_stream(event: StreamEvent) -> None:
             try:
                 self.__controller.attach_stream(event.id, circuit_id)
             except (OperationFailed, InvalidRequest) as exc:
@@ -136,15 +139,14 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
                 self.__controller.close_stream(event.id)
 
         # An event listener, called whenever StreamEvent status changes
-        def probe_stream(event: EventType) -> None:
-            if event.status == "DETACHED":
-                if circuit_id:
-                    self.__logger.warning(
-                        "Stream Detached from circuit %s...", circuit_id
-                    )
-                else:
-                    self.__logger.warning("Stream Detached from circuit...")
+        def probe_stream(event: StreamEvent) -> None:
+            if event.target_port != self.__dest.port:
+                self.__logger.debug("Not our stream; not our problem.")
+                return
+            if event.status == StreamStatus.DETACHED and event.circ_id == circuit_id:
+                self.__logger.warning("Stream Detached from circuit %s...", circuit_id)
                 self.__logger.info("\t%s", str(vars(event)))
+                return
             if event.status == "NEW" and event.purpose == "USER":
                 attach_stream(event)
 
@@ -178,7 +180,13 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
     # Tell socks to use tor as a proxy
     def __setup_proxy(self) -> socket.socket:
         sock = socks.socksocket()
-        sock.set_proxy(self.__SOCKS_TYPE, self.__SOCKS_HOST, self.__socks_port)
+        sock.set_proxy(
+            self.__SOCKS_TYPE,
+            self.__SOCKS_HOST,
+            self.__socks_port,
+            username="user",
+            password=str(hash(self)),  # this makes Tor give us a new "stream"
+        )
         sock.settimeout(self.__socks_timeout)
         return sock
 
