@@ -148,6 +148,7 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
                 self.__logger.info("\t%s", str(vars(event)))
                 return
             if event.status == "NEW" and event.purpose == "USER":
+                self.__logger.debug("Found our stream; attaching!")
                 attach_stream(event)
 
         self.__probe = probe_stream
