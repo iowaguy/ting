@@ -31,11 +31,9 @@ class EchoServer:
         self.endpoint = endpoint
 
     def serve_one(self):
-        logger.debug("Socket is ready to read")
         try:
             sock, address = self.echo_socket.accept()
         except timeout:
-            logger.debug("Socket timeout")
             return
         logger.info("Connection accepted from %s", str(address))
         with sock:
@@ -91,8 +89,9 @@ def _echo_server_background_inner(endpoint: Endpoint):
             thread.start()
             yield echo_server.endpoint
         finally:
+            logger.info("Shutting down echo server for port %i", endpoint.port)
             shutdown.set()
-            thread.join()
+            thread.join(timeout=1)
 
 
 @contextmanager

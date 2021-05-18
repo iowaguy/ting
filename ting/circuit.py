@@ -91,6 +91,8 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
 
         last_exception: Exception
         while failures < self.__max_circuit_build_attempts:
+            if failures > 0:
+                time.sleep(1)
             try:
                 self.__logger.info("Building circuit...")
                 start_build = time.time()
@@ -141,7 +143,7 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
         # An event listener, called whenever StreamEvent status changes
         def probe_stream(event: StreamEvent) -> None:
             if event.target_port != self.__dest.port:
-                self.__logger.debug("Not our stream; not our problem.")
+                # Not our stream; not our problem.
                 return
             if event.status == StreamStatus.DETACHED and event.circ_id == circuit_id:
                 self.__logger.warning("Stream Detached from circuit %s...", circuit_id)
@@ -165,15 +167,10 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
                 Color.SUCCESS + "\tConnected to endpoint successfully!" + Color.END
             )
         except socket.error as exc:
-            self.__logger.warning(
+            self.__logger.exception(
                 "Failed to connect to the endpoint using the given circuit."
                 "\nClosing connection.",
             )
-            if self.__tor_sock:
-                raise ConnectionAlreadyExistsException(
-                    "This socket is already connected", exc
-                ) from exc
-
             raise CircuitConnectionException(
                 "Failed to connect using the given circuit: ", "", exc
             ) from exc
@@ -181,12 +178,14 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
     # Tell socks to use tor as a proxy
     def __setup_proxy(self) -> socket.socket:
         sock = socks.socksocket()
+        # random password makes Tor give us a new "stream"
+        password = str(hash(self)) + str(hash(datetime.datetime.now()))
         sock.set_proxy(
             self.__SOCKS_TYPE,
             self.__SOCKS_HOST,
             self.__socks_port,
             username="user",
-            password=str(hash(self)),  # this makes Tor give us a new "stream"
+            password=password,
         )
         sock.settimeout(self.__socks_timeout)
         return sock
