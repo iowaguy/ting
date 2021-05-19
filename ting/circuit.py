@@ -81,7 +81,10 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
         self.__build_time: float = 0.0
 
     def __exit__(self, exc_type: Exception, exc_value: str, exc_traceback: str) -> None:
-        self.close()
+        try:
+            self.close()
+        except Exception as exc:
+            self.__logger.warning("Error closing circuit", exc_info=exc)
 
     def __enter__(self: TC) -> TC:
         return self.build()
@@ -151,7 +154,7 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
                 self.__logger.info("\t%s", str(vars(event)))
                 return
             if event.status == "NEW" and event.purpose == "USER":
-                self.__logger.debug("Found our stream; attaching!")
+                self.__logger.info("Found our stream; attaching!")
                 attach_stream(event)
 
         self.__probe = probe_stream
