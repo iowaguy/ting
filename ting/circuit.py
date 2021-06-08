@@ -1,5 +1,6 @@
 """A module for Tor circuit operations"""
 
+import datetime
 import logging
 import socket
 import time
