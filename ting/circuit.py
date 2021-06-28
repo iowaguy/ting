@@ -18,11 +18,7 @@ from typing import (
 )
 
 import stem
-from stem import (
-    OperationFailed,
-    InvalidRequest,
-    CircuitExtensionFailed,
-)
+from stem import OperationFailed, InvalidRequest, CircuitExtensionFailed, StreamStatus
 from stem.control import Controller, EventType
 from stem.response.events import StreamEvent
 
