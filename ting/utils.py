@@ -18,7 +18,7 @@ RelayPair = Tuple[Fingerprint, Fingerprint]
 """A pair of Tor relays"""
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class Endpoint:
     host: IPAddress
     port: Port
