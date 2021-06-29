@@ -231,8 +231,10 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
             self.__tor_sock.send(timer.SerializeToString())
 
             self.__logger.debug("Tearing down Tor circuit.")
-            self.__controller.close_circuit(self.__circuit_id)
-            self.__controller.remove_event_listener(self.__probe)
+            try:
+                self.__controller.close_circuit(self.__circuit_id)
+            finally:
+                self.__controller.remove_event_listener(self.__probe)
             self.__controller = None
         except TorShutdownException:
             self.__logger.info(
