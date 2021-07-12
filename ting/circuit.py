@@ -1,5 +1,6 @@
 """A module for Tor circuit operations"""
 
+import contextlib
 import datetime
 import logging
 import socket
@@ -61,7 +62,6 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
         self.__logger = logging.getLogger(__name__)
         self.__relays = relays
         self.__ting_leg = leg
-        self.__tor_sock: socket.socket = socket.socket()
         self.__circuit_id: Optional[int] = None
         self.__dest = dest
 
@@ -76,16 +76,8 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
         self.__probe: Callable[[Any], Any]
         self.__build_time: float = 0.0
 
-    def __exit__(self, exc_type: Exception, exc_value: str, exc_traceback: str) -> None:
-        try:
-            self.close()
-        except Exception as exc:
-            self.__logger.warning("Error closing circuit", exc_info=exc)
-
-    def __enter__(self: TC) -> TC:
-        return self.build()
-
-    def build(self: TC) -> TC:
+    @contextlib.contextmanager
+    def build(self) -> Any:
         """Build the circuit."""
         cid, failures = None, 0
 
@@ -100,18 +92,17 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
                 cid = self.__controller.new_circuit(self.relays, await_build=True)
                 self.__circuit_id = cid
                 end_build = time.time()
+                self.__build_time = round(end_build - start_build, 5)
                 self.__logger.info("Circuit built successfully.")
 
                 self.__logger.info("Configuring event listener...")
                 self.__configure_listeners(cid)
                 self.__logger.info("Event listener setup is complete.")
                 self.__logger.info("Setting up SOCKS proxy...")
-                self.__tor_sock = self.__setup_proxy()
-                self.__logger.info("SOCKS proxy setup complete.")
-
-                self.__build_time = round(end_build - start_build, 5)
-                self.__connect_to_dest()
-                return self
+                with self.__setup_proxy() as tor_sock:
+                    self.__logger.info("SOCKS proxy setup complete.")
+                    self.__connect_to_dest()
+                    yield self
 
             except (InvalidRequest, CircuitExtensionFailed) as exc:
                 failures += 1
@@ -158,11 +149,11 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
             probe_stream, EventType.STREAM  # pylint: disable=no-member
         )
 
-    def __connect_to_dest(self) -> None:
+    def __connect_to_dest(self, tor_sock: socket.socket) -> None:
         try:
             self.__logger.info("\tTrying to connect to endpoint..")
 
-            self.__tor_sock.connect((self.__dest.host, self.__dest.port))
+            tor_sock.connect((self.__dest.host, self.__dest.port))
             self.__logger.info(  # pylint: disable=logging-not-lazy
                 Color.SUCCESS + "\tConnected to endpoint successfully!" + Color.END
             )
@@ -190,7 +181,7 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
         sock.settimeout(self.__socks_timeout)
         return sock
 
-    def sample(self) -> Tuple[float, float]:
+    def sample(self, tor_sock: socket.socket) -> Tuple[float, float]:
         """Take a Ting measurement on this circuit. Results in seconds.
         :param num_samples The number of measurements to take. Defaults to 1."""
 
@@ -199,11 +190,11 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
             timer.ptype = ting.timer_pb2.Ting.Packet.TING
             msg = timer.SerializeToString()
             start_time = time.time()
-            self.__tor_sock.send(msg)
+            tor_sock.send(msg)
             self.__logger.debug("Sending %s", msg)
 
             timer.Clear()
-            data = self.__tor_sock.recv(1024)
+            data = tor_sock.recv(1024)
             stop_time = time.time()
             timer.ParseFromString(data)
             outgoing_time = timer.time_sec - start_time
@@ -214,21 +205,19 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
                 "Failed to connect using the given circuit: %s" "\nClosing connection.",
                 str(exc),
             )
-            if self.__tor_sock:
-                self.close()
 
             raise CircuitConnectionException(
                 "Failed to connect using the given circuit: ", "", exc
             ) from exc
 
-    def close(self) -> None:
+    def close(self, tor_sock: socket.socket) -> None:
         """Close the Tor socket."""
         try:
             timer = ting.timer_pb2.Ting()
             timer.ptype = ting.timer_pb2.Ting.Packet.CLOSE
 
             # Tell echo server that this connection is over
-            self.__tor_sock.send(timer.SerializeToString())
+            tor_sock.send(timer.SerializeToString())
 
             self.__logger.debug("Tearing down Tor circuit.")
             try:
@@ -240,7 +229,6 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
             self.__logger.info(
                 "There was an issue shutting down Tor, but it probably doesn't matter."
             )
-        self.__tor_sock.close()
 
     @property
     def leg(self) -> TingLeg:
