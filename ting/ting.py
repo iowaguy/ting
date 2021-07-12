@@ -35,10 +35,10 @@ def ting(  # pylint: disable=too-many-arguments
             results[(relay1, relay2)] = {l: [] for l in TingLeg}
             circuit_templates = ting_client.generate_circuit_templates(relay1, relay2)
             for circuit_template in circuit_templates:
-                with circuit_template as circuit:
+                with circuit_template.build() as sampler:
                     for _ in range(num_samples):
                         results[(relay1, relay2)][circuit_template.leg].append(
-                            circuit.sample()
+                            sampler()
                         )
 
     return results

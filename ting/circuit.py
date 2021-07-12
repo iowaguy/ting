@@ -101,8 +101,8 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
                 self.__logger.info("Setting up SOCKS proxy...")
                 with self.__setup_proxy() as tor_sock:
                     self.__logger.info("SOCKS proxy setup complete.")
-                    self.__connect_to_dest()
-                    yield self
+                    self.__connect_to_dest(tor_sock)
+                    yield lambda: self.sample(tor_sock)
 
             except (InvalidRequest, CircuitExtensionFailed) as exc:
                 failures += 1
