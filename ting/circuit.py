@@ -99,11 +99,9 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
                 self.__configure_listeners(cid)
                 self.__logger.info("Event listener setup is complete.")
                 self.__logger.info("Setting up SOCKS proxy...")
-                with self.__setup_proxy() as tor_sock:
-                    self.__logger.info("SOCKS proxy setup complete.")
-                    self.__connect_to_dest(tor_sock)
-                    yield lambda: self.sample(tor_sock)
-
+                tor_sock = self.__setup_proxy()
+                self.__connect_to_dest(tor_sock)
+                self.__logger.info("SOCKS proxy setup complete.")
             except (InvalidRequest, CircuitExtensionFailed) as exc:
                 failures += 1
                 if "message" in vars(exc):
@@ -113,6 +111,12 @@ class TorCircuit:  # pylint: disable=too-many-instance-attributes
                 if self.__circuit_id is not None:
                     self.__controller.close_circuit(cid)
                 last_exception = exc
+            else:
+                try:
+                    yield lambda: self.sample(tor_sock)
+                finally:
+                    self.close(tor_sock)
+                return
 
         raise last_exception
 
